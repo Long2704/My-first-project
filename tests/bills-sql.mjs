@@ -18,7 +18,7 @@ insert into public.profiles values ('00000000-0000-0000-0000-000000000001','Owne
 insert into public.restaurant_tables(id,name) values (1,'Bàn 1'),(2,'Bàn 2');
 insert into public.menu_items(id,name,price,category) values ('10000000-0000-0000-0000-000000000001','Bún riêu',58000,'bun'),('10000000-0000-0000-0000-000000000002','Trà đá',3000,'do_uong');
 `);
-for(const file of ['003_ordering.sql','004_payments.sql','005_cancellations_audit.sql','006_revenue_report.sql','007_table_transfer.sql','008_menu_management.sql','009_split_bills.sql','010_optional_transfer_reason.sql','011_cancellations_kitchen_history.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+for(const file of ['003_ordering.sql','004_payments.sql','005_cancellations_audit.sql','006_revenue_report.sql','007_table_transfer.sql','008_menu_management.sql','009_split_bills.sql','010_optional_transfer_reason.sql','011_cancellations_kitchen_history.sql','012_table_actions_merge.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
 const user=async n=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[`00000000-0000-0000-0000-00000000000${n}`]);await db.exec('set role authenticated');};
 const one=async(sql,p=[])=> (await db.query(sql,p)).rows[0];
 await db.exec("insert into auth.users values('00000000-0000-0000-0000-000000000004');insert into public.profiles values('00000000-0000-0000-0000-000000000004','Cashier','thu_ngan');");
@@ -33,7 +33,7 @@ const req='60000000-0000-0000-0000-000000000001';
 const move=(ids=[drinkId],from=1,to=0,r=req,s=session,reason='Khách trả riêng')=>db.query('select public.move_bill_items($1,$2,$3,$4,$5::uuid[],$6) target',[s,r,from,to,ids,reason]);
 await user(2);await assert.rejects(move(),/không có quyền/);
 await user(3);await assert.rejects(move(),/không có quyền/);
-await user(4);await assert.rejects(move([],1,0),/Chọn từ/);await assert.rejects(move([drinkId,drinkId]),/bị trùng/);await assert.rejects(move([drinkId],1,1),/không hợp lệ/);await assert.rejects(move([drinkId],1,0,req,session,' '),/Lý do/);
+await user(4);await assert.rejects(move([],1,0),/Chọn từ/);await assert.rejects(move([drinkId,drinkId]),/bị trùng/);await assert.rejects(move([drinkId],1,1),/không hợp lệ/);await assert.rejects(move([drinkId],1,0,req,session,'a'.repeat(501)),/tối đa/);
 const target=(await move()).rows[0].target;assert.equal(target,2);assert.equal((await move()).rows[0].target,2);
 assert.equal((await one("select count(*)::int n from public.audit_log where type='bill_move'")).n,1);
 const after=(await db.query('select * from public.order_items where order_id=$1 order by id',[order])).rows;

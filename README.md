@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, tách/gộp bàn, mang về, giữ sáng màn hình và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, tách bàn, mang về, giữ sáng màn hình và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -147,3 +147,14 @@ Trong Thao tác bàn có Hủy cả Bàn N. Pop-up liệt kê toàn bộ dòng m
 Bếp vuốt đơn sang trái hoặc phải đủ xa rồi thả để hoàn thành. Cuộn dọc, vuốt ngắn, nút bấm, lịch sử và vai trò phục vụ không hoàn thành bằng vuốt. Nút Xong vẫn dùng được bằng bàn phím. Đường đi hiển thị dạng Bàn 1 → Bàn 2 → Bàn 5; lưu phía server và không thêm mốc lặp khi thử lại cùng mã chuyển. Lịch sử trước nâng cấp được dựng từ các lần chuyển đã ghi theo thời điểm, lịch sử mới được nối nguyên tử cùng giao dịch chuyển bàn.
 
 `test:table-cancel` kiểm tra nâng cấp trực tiếp từ 009 và sau 010, lịch sử/retry, hủy món không lý do, hủy bàn theo quyền/snapshot, giữ món đã trả/hóa đơn, đóng bàn, chống hủy nhầm lượt khách mới. `test:table-workflows` kiểm thử trình duyệt: không có ô lý do, đường đi 1→2→5, vuốt hai chiều, cuộn dọc/vuốt ngắn/lịch sử/phân quyền, pop-up hủy bàn, snapshot cũ và thử lại sau reload. SQL dùng PGlite, UI và thao tác chuột dùng Chromium/Supabase giả lập; chưa kiểm chứng nhiều phiên database đồng thời hay vuốt cảm ứng trên tablet thực tế.
+
+
+## Thao tác bàn dạng pop-up và chuyển vào bàn có đơn
+
+Chạy `supabase/migrations/012_table_actions_merge.sql` sau 011 trước khi triển khai bản mới. Chọn bàn → icon ba chấm cạnh tên bàn → pop-up Thao tác bàn: Chuyển bàn, Tách/gộp bill, Hủy cả bàn. Bấm × hoặc Escape để đóng; yêu cầu chờ vẫn lưu và có thể mở lại để thử cùng mã. Tách/gộp bill không còn nhập lý do. Các lý do trong nhật ký cũ vẫn được giữ.
+
+Chuyển bàn có thể chọn bàn trống hoặc bàn đang có đơn. Bàn đang có đơn nhận thêm các bill riêng từ nguồn, tự đánh số tiếp theo và giữ các nhóm bill nguồn; nếu muốn chung một bill thì dùng Tách/gộp bill. Bàn nguồn trở thành trống. Món, giá, ghi chú, trạng thái/thứ tự bếp được giữ, các hóa đơn đã trả không thay đổi. Mỗi đơn giữ đường đi bàn riêng: đơn nguồn Bàn 1 → Bàn 2, đơn có sẵn ở đích vẫn Bàn 2; chuyển tiếp sang Bàn 5 sẽ lần lượt là Bàn 1 → Bàn 2 → Bàn 5 và Bàn 2 → Bàn 5.
+
+Yêu cầu chuyển lưu phiên bàn đích đã chọn. Server khóa hai bàn theo thứ tự, kiểm tra phiên đích vẫn đúng và lưu kết quả trong một giao dịch. Bàn đích đổi lượt khách/đóng/chuyển trước khi xử lý sẽ bị từ chối để đồng bộ và chọn lại. Mất phản hồi/reload dùng cùng mã yêu cầu, không gộp lần hai hoặc ảnh hưởng lượt khách mới. Các yêu cầu gọi món, tách bill và thanh toán đã hoàn tất từ trước vẫn thử lại được bằng mã cũ; yêu cầu mới đối với phiên nguồn đã đóng bị từ chối.
+
+Kiểm thử `test:table-merge` dùng PGlite cho gộp bàn, phân quyền, phiên đích thay đổi, bill riêng, hóa đơn cũ, retry, đường đi và thanh toán/bếp sau gộp. `test:table-actions` dùng Chromium với Supabase giả lập để kiểm tra icon/pop-up, bàn đích có đơn, thử lại sau reload, tách bill không lý do, đường đi riêng và kích thước điện thoại. Chưa thử nhiều phiên PostgreSQL đồng thời hoặc thiết bị cảm ứng thật.

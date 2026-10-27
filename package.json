@@ -22,6 +22,8 @@
     "test:bills-ui": "node tests/bills-flow.mjs",
     "test:kitchen-tools": "node tests/kitchen-tools-flow.mjs",
     "test:layout": "node tests/layout-flow.mjs",
+    "test:table-actions": "node tests/table-actions-flow.mjs",
+    "test:table-merge": "node tests/table-merge-sql.mjs",
     "test:table-cancel": "node tests/table-cancel-sql.mjs",
     "test:table-workflows": "node tests/table-workflows-flow.mjs"
   },

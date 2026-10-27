@@ -39,7 +39,8 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
 });
 bills.push({id:'history-bill',invoice_no:11,table_no:6,bill_no:1,gross:61000,discount:0,total:61000,method:'cash',cash_received:100000,change_due:39000,paid_at:'2026-10-27T10:00:00Z',bill_items:menu.map(m=>({...m,qty:1,note:''}))});
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
-async function management(name){if(!await page.locator('.management-menu').evaluate(e=>e.open))await page.locator('.management-menu>summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function management(name){
+ if(await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).isVisible())await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).click();if(!await page.locator('.management-menu').evaluate(e=>e.open))await page.locator('.management-menu>summary').click();await page.getByRole('button',{name,exact:true}).click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.locator('.table-card').count(),12);assert.equal(await page.locator('.management-page:visible').count(),0);assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
 assert.equal(await page.getByRole('button',{name:'Hóa đơn gần đây',exact:true}).count(),0);
@@ -47,7 +48,7 @@ await page.locator('.table-filters button').nth(1).click();assert.equal(await pa
 await page.getByRole('textbox',{name:'Tìm bàn',exact:true}).fill('Bàn 2');assert.equal(await page.locator('.table-card').count(),1);await page.getByRole('textbox',{name:'Tìm bàn',exact:true}).fill('');await page.locator('.table-filters button').first().click();
 await page.screenshot({path:'/workspace/work/pos-desktop.png',fullPage:true});
 await page.getByRole('button',{name:/^Bàn 1 /}).click();await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();assert.match(await page.locator('footer').innerText(),/58\.000đ/);
-assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).count(),0);await page.locator('.table-operations>summary').click();assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).isDisabled(),true);
+assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).count(),0);await page.getByRole('button',{name:'Thao tác bàn',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).isDisabled(),true);
 await management('Báo cáo doanh thu');await page.getByRole('button',{name:'Xem báo cáo',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Gửi bếp',exact:true}).count(),0);
 await page.getByRole('button',{name:'Phục vụ',exact:true}).click();assert.match(await page.locator('footer').innerText(),/58\.000đ/);await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 await page.screenshot({path:'/workspace/work/pos-order-desktop.png',fullPage:true});

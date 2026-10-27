@@ -1,3 +1,4 @@
+import PosIcon from './PosIcon';
 import {useEffect,useRef,useState} from 'react';
 import {supabase} from './supabase';
 import type {OrderLine,TableSession} from './order-model';
@@ -31,7 +32,7 @@ export default function CancelTablePanel({userId,table,sessions,disabled,onPendi
   finally{lock.current=false;if(alive.current)setBusy(false);}
  }
  const snapshot=pending??draft;
- return <section className="cancel-table-panel" aria-label="Hủy bàn">{table&&lines.length>0&&!pending&&<button className="danger-outline" disabled={disabled||busy||storageError} onClick={start}>Hủy cả {table.name}</button>}
+ return <section className="cancel-table-panel" aria-label="Hủy bàn">{table&&lines.length>0&&!pending&&<button className="danger-outline" disabled={disabled||busy||storageError} onClick={start}><PosIcon name="cancel"/><span>Hủy cả {table.name}</span></button>}
  {storageError&&<p role="alert">Không đọc được yêu cầu hủy bàn chờ. Không xóa dữ liệu trình duyệt; liên hệ hỗ trợ.</p>}
  {pending&&<aside role="status"><strong>Hủy bàn chờ xác nhận · Bàn {pending.tableId}</strong><p>Giữ nguyên mã và danh sách {pending.items.length} dòng món.</p><button disabled={busy} onClick={()=>{setOpen(true);}}>Kiểm tra yêu cầu hủy bàn</button></aside>}
  {!open&&error&&<p role="alert">{error}</p>}
