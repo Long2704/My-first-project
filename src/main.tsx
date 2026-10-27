@@ -6,6 +6,7 @@ import {fifo, kitchenLines, savedTotal, tableStatus} from './order-model';
 import type {Order, TableSession} from './order-model';
 import './style.css';
 import PaymentPanel from './PaymentPanel';
+import RevenuePanel from './RevenuePanel';
 import {CancelItem,AuditPanel} from './OperationsPanel';
 const groups=[{id:'bun',name:'Món chính'},{id:'an_them',name:'Món thêm'},{id:'do_uong',name:'Nước giải khát'}];
 const roles:Record<string,string>={chu:'Chủ quán',thu_ngan:'Thu ngân',phuc_vu:'Phục vụ',bep:'Bếp'};
@@ -125,7 +126,7 @@ function App(){
  <p className="sync-status" role="status">{syncError|| (lastSync?`Đã đồng bộ ${lastSync} · cập nhật mỗi 5 giây`:'Đang tải đơn hàng…')}</p>
  <aside><strong>Bản thử nghiệm POS</strong><p>Đã hỗ trợ gọi món, thanh toán, hủy dòng món và nhật ký. Chưa có tách/gộp bill; hãy kiểm tra bằng đơn thử trước khi vận hành.</p></aside>
  {pending&&<aside role="status"><strong>Đơn chờ xác nhận — Bàn {pending.tableId}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn. Chưa hỗ trợ tự gửi khi có mạng.</p><button disabled={sending||paymentPending} onClick={sendOrder}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}
- {['chu','thu_ngan'].includes(profile.role)&&<AuditPanel/>}
+ {['chu','thu_ngan'].includes(profile.role)&&<><RevenuePanel key={session!.user.id}/><AuditPanel/></>}
  <PaymentPanel key={session!.user.id} userId={session!.user.id} table={view==='service'?selected:null} sessions={sessions} canPay={['chu','thu_ngan'].includes(profile.role)} hasDraft={!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh}/>
  {view==='kitchen'?<><nav aria-label="Đơn bếp"><button aria-pressed={!history} onClick={()=>setHistory(false)}>Đang làm ({cooking.length})</button><button aria-pressed={history} onClick={()=>setHistory(true)}>Lịch sử</button></nav><section>{kitchen.map((o,index)=><article className={`kitchen-card ${!history&&index===0?'first-order':''}`} key={o.id}><div className="order-heading"><h2>Bàn {o.table_sessions.table_id}</h2><span>{new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · {Math.max(0,Math.floor((Date.now()-Date.parse(o.created_at))/60000))} phút</span></div><small>Đơn {o.id.slice(0,8)}</small><ul>{kitchenLines(o).map(i=><li key={i.id}><strong>{i.qty} × {i.name}</strong>{i.note&&<p className="item-note">{i.note}</p>}</li>)}</ul>{!history&&canComplete&&<button className="primary" disabled={!!completing} onClick={()=>void complete(o.id)}>{completing===o.id?'Đang lưu…':'Xong'}</button>}</article>)}{!kitchen.length&&<p>{history?'Chưa có đơn đã xong của các bàn đang mở.':'Chưa có món đang làm.'}</p>}</section></>:!selected?<><h2 className="section-title">Chọn bàn</h2><div className="table-grid">{tables.map(t=>{
  const d=drafts[t.id]??{};const draftTotal=menu.reduce((sum,i)=>sum+i.price*(d[i.id]||0),0);

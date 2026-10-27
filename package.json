@@ -11,7 +11,9 @@
     "test:sql": "node tests/payment-sql.mjs",
     "test:payments": "node tests/payment-flow.mjs",
     "test:cancellations": "node tests/cancellation-sql.mjs",
-    "test:cancellation-ui": "node tests/cancellation-flow.mjs"
+    "test:cancellation-ui": "node tests/cancellation-flow.mjs",
+    "test:revenue": "node tests/revenue-sql.mjs",
+    "test:revenue-ui": "node tests/revenue-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
