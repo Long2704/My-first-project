@@ -19,7 +19,8 @@
     "test:menu": "node tests/menu-sql.mjs",
     "test:menu-ui": "node tests/menu-flow.mjs",
     "test:bills": "node tests/bills-sql.mjs",
-    "test:bills-ui": "node tests/bills-flow.mjs"
+    "test:bills-ui": "node tests/bills-flow.mjs",
+    "test:kitchen-tools": "node tests/kitchen-tools-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
