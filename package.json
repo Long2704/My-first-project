@@ -15,7 +15,9 @@
     "test:revenue": "node tests/revenue-sql.mjs",
     "test:revenue-ui": "node tests/revenue-flow.mjs",
     "test:transfer": "node tests/transfer-sql.mjs",
-    "test:transfer-ui": "node tests/transfer-flow.mjs"
+    "test:transfer-ui": "node tests/transfer-flow.mjs",
+    "test:menu": "node tests/menu-sql.mjs",
+    "test:menu-ui": "node tests/menu-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
