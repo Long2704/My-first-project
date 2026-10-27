@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, tách/gộp bàn hoặc bill, mang về, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -97,3 +97,13 @@ Gửi hoặc xóa các giỏ món đang chọn trước khi chuyển. Trên cùn
 RPC khóa hai bàn theo thứ tự id rồi khóa phiên khách, kiểm tra phiên còn mở, bàn nguồn còn đúng và bàn đích còn trống; ghi chuyển bàn và nhật ký cùng giao dịch. Migration lưu bàn gốc của đơn để gửi lại mã đơn cũ sau chuyển không bị trùng. Thanh toán/hủy kiểm tra lại vị trí phiên sau khi lấy khóa để từ chối dữ liệu vừa bị thay đổi. Một thiết bị khác vẫn có thể giữ giỏ chưa gửi ở bàn cũ: giỏ chưa gửi chưa đồng bộ giữa thiết bị, vì vậy cần báo nhân viên kiểm tra lại bàn trước khi gửi.
 
 `npm run test:transfer` kiểm tra PGlite: phân quyền, bàn trùng/bận/ngừng hoạt động, giữ món/bếp, thử lại, gửi lại đơn bàn gốc sau chuyển, tái sử dụng bàn nguồn, hủy/thanh toán/hoàn thành sau chuyển, snapshot bàn trên hóa đơn và nhật ký. `npm run test:transfer-ui` kiểm tra Chromium với Supabase giả lập: xác nhận/lý do, chặn giỏ nháp, thử lại sau reload, tổng tiền và bếp theo bàn mới, xung đột bàn đích, nhật ký và mobile. Chưa kiểm chứng nhiều phiên PostgreSQL đồng thời hoặc Supabase thật.
+
+## Quản lý thực đơn
+
+Chạy `supabase/migrations/008_menu_management.sql` sau 007. Chủ quán mở Quản lý thực đơn → Thêm món mới hoặc Sửa tên món. Có tên, giá nguyên đồng (0–10.000.000), nhóm món, thứ tự (0–9999), Đang bán và Hết món tạm thời. Bỏ Đang bán để ngừng bán; bật lại để khôi phục. Không xóa món đã có lịch sử. Chỉ chủ quán được xem/sửa màn hình quản lý; RPC kiểm tra vai trò phía server, client không được trực tiếp ghi menu_items. Thu ngân/phục vụ/bếp tiếp tục xem menu bán theo quyền cũ.
+
+Đơn đã lưu và hóa đơn giữ tên/giá snapshot cũ. Giá mới áp dụng khi gửi đơn mới. App đồng bộ cả thực đơn mỗi 5 giây và khi bấm Đồng bộ. Nếu giá thay đổi trong lúc gửi, server từ chối và rollback toàn bộ đơn, app bỏ yêu cầu đã bị từ chối và giữ giỏ để kiểm tra/gửi lại. Nếu giỏ có món hết/ngừng bán, app chặn gửi và yêu cầu Xóa chọn rồi chọn lại. Đơn chờ từ phiên bản cũ không có expected_price vẫn có thể thử lại theo giá server để tương thích; đơn đã được server nhận luôn trả về chính đơn cũ.
+
+Gửi/xóa món đang chọn trước khi chỉnh menu. Trước khi lưu, app giữ request_id và dữ liệu cập nhật trong localStorage theo tài khoản; mất phản hồi hoặc reload thì dùng Thử lại cùng mã cập nhật. Không tạo lại món bằng mã khác khi chưa xác nhận. Phiên bản menu bảo vệ việc hai thiết bị cùng sửa: người lưu sau phải tải lại món đã đổi, tránh ghi đè thầm lặng. Nhật ký ghi thao tác và giá trị trước/sau.
+
+`npm run test:menu` kiểm tra SQL PGlite: quyền chủ, thêm/sửa lặp, phiên bản cũ, dữ liệu sai, kiểm tra giá gửi đơn, hết/ngừng bán và snapshot đơn/hóa đơn. `npm run test:menu-ui` kiểm tra Chromium với Supabase giả lập: tạo/sửa, tải lại sau mất phản hồi, xung đột, ẩn món, đồng bộ menu, phục hồi giỏ khi giá đổi, mobile và ẩn quản lý với thu ngân. Chưa kiểm thử Supabase thật hoặc nhiều phiên PostgreSQL đồng thời.
