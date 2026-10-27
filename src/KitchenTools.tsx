@@ -1,12 +1,10 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 type Props={orders:{id:string}[];ready:boolean;onFreshChange:(ids:string[])=>void;onShowQueue:()=>void};
-type WakeState='off'|'requesting'|'on'|'paused'|'released'|'error';
 const audioConstructor=()=>window.AudioContext??(window as Window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
 export default function KitchenTools({orders,ready,onFreshChange,onShowQueue}:Props){
  const [fresh,setFresh]=useState<string[]>([]),[sound,setSound]=useState(false),[audioBusy,setAudioBusy]=useState(false),[soundError,setSoundError]=useState('');
- const [wanted,setWanted]=useState(false),[wakeState,setWakeState]=useState<WakeState>('off'),[retry,setRetry]=useState(0),[visible,setVisible]=useState(()=>document.visibilityState==='visible');
+ const [visible,setVisible]=useState(()=>document.visibilityState==='visible');
  const known=useRef(new Set<string>()),initialized=useRef(false),audio=useRef<AudioContext|null>(null),soundEnabled=useRef(false),audioLock=useRef(false),alive=useRef(true);
- const wakeSupported=typeof navigator.wakeLock?.request==='function'&&window.isSecureContext;
  const soundSupported=!!audioConstructor();
  const chime=useCallback(()=>{
   const context=audio.current;
@@ -43,19 +41,6 @@ export default function KitchenTools({orders,ready,onFreshChange,onShowQueue}:Pr
    void audio.current.resume().then(()=>{if(alive.current&&audio.current?.state!=='running'){soundEnabled.current=false;setSound(false);setSoundError('Bấm Bật chuông đơn mới để kích hoạt lại âm thanh.');}}).catch(()=>{if(alive.current){soundEnabled.current=false;setSound(false);setSoundError('Bấm Bật chuông đơn mới để kích hoạt lại âm thanh.');}});
   }
  },[visible]);
- useEffect(()=>{
-  let cancelled=false,sentinel:WakeLockSentinel|null=null;
-  if(!wanted||!wakeSupported){setWakeState('off');return;}
-  if(!visible){setWakeState('paused');return;}
-  setWakeState('requesting');
-  void navigator.wakeLock.request('screen').then(lease=>{
-   if(cancelled){void lease.release().catch(()=>{});return;}
-   sentinel=lease;
-   setWakeState(lease.released?'released':'on');
-   lease.addEventListener('release',()=>{if(!cancelled)setWakeState('released');});
-  }).catch(()=>{if(!cancelled)setWakeState('error');});
-  return()=>{cancelled=true;if(sentinel&&!sentinel.released)void sentinel.release().catch(()=>{});};
- },[wanted,wakeSupported,visible,retry]);
  async function enableSound(){
   if(audioLock.current||!soundSupported)return;audioLock.current=true;setAudioBusy(true);setSoundError('');
   try{
@@ -69,13 +54,10 @@ export default function KitchenTools({orders,ready,onFreshChange,onShowQueue}:Pr
   finally{audioLock.current=false;if(alive.current)setAudioBusy(false);}
  }
  function mute(){soundEnabled.current=false;setSound(false);setSoundError('');if(audio.current?.state==='running')void audio.current.suspend().catch(()=>{});}
- const wakeText:Record<WakeState,string>={off:'Giữ sáng đang tắt.',requesting:'Đang yêu cầu giữ sáng…',on:'Đang giữ màn hình bếp sáng.',paused:'Tạm dừng giữ sáng khi trang không hiển thị.',released:'Hệ thống đã ngừng giữ sáng. Có thể bấm Thử giữ sáng lại.',error:'Chưa giữ sáng được. Kiểm tra chế độ tiết kiệm pin rồi thử lại.'};
  return <section className="kitchen-tools" aria-label="Tiện ích bếp"><h2>Theo dõi đơn bếp</h2>
  <div className="kitchen-tool-actions"><button disabled={!soundSupported||audioBusy} aria-pressed={sound} onClick={()=>sound?mute():void enableSound()}>{audioBusy?'Đang bật chuông…':sound?'Tắt chuông đơn mới':'Bật chuông đơn mới'}</button>{sound&&<button onClick={chime}>Thử chuông</button>}
- <button disabled={!wakeSupported} aria-pressed={wanted} onClick={()=>setWanted(v=>!v)}>{wanted?'Tắt giữ sáng':'Giữ màn hình bếp sáng'}</button>
- {wanted&&(wakeState==='released'||wakeState==='error')&&<button onClick={()=>setRetry(v=>v+1)}>Thử giữ sáng lại</button>}</div>
+</div>
  <p role="status">{soundError||(!soundSupported?'Thiết bị chưa hỗ trợ chuông trong trình duyệt.':sound?'Chuông đã bật cho đơn mới nhận khi đang mở Bếp.':'Bấm Bật chuông để nghe âm thử và báo đơn mới. Sau khi tải lại trang cần bật lại chuông.')}</p>
- <p role="status">{wakeSupported?wakeText[wakeState]:'Thiết bị hoặc trình duyệt chưa hỗ trợ giữ màn hình sáng.'}</p>
  <p className="sync-status">Giữ trang Bếp mở để nhận cập nhật mỗi 5 giây. Chuyển ứng dụng hoặc khóa máy có thể làm chậm cập nhật và tạm dừng âm thanh.</p>
  {!!fresh.length&&<aside className="new-kitchen-alert" role="status"><strong>Có {fresh.length} đơn bếp mới chưa xem</strong><div className="kitchen-tool-actions"><button onClick={onShowQueue}>Xem đơn đang làm</button><button onClick={()=>setFresh([])}>Đánh dấu đã xem</button></div><p>Đánh dấu đã xem chỉ xóa thông báo; nút Xong trên đơn mới hoàn thành món.</p></aside>}
  </section>;
