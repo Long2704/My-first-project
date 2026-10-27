@@ -15,3 +15,5 @@ fieldset{border:0;padding:0;margin:0;min-width:0}.visually-hidden{position:absol
 .bill-panel{margin:16px 0}.bill-move-form{max-width:100%;margin:0}.bill-move-form select,.cashier-panel select{font:inherit;padding:12px;width:100%;border-radius:10px}.bill-move-form button{margin-top:12px}.bill-move-form .checkbox-label{align-items:start;overflow-wrap:anywhere}
 
 .kitchen-tools{border:1px solid #d9bba9;border-radius:14px;padding:16px;margin:18px 0}.kitchen-tool-actions{display:flex;flex-wrap:wrap;gap:10px}.kitchen-tools p{margin:0;line-height:1.6}.new-kitchen-alert{display:grid;gap:12px}.new-kitchen-order{box-shadow:inset 5px 0 #bd6a0b}.new-order-badge{display:inline-block;margin-left:10px;background:#fff0d9;color:#73301a;border-radius:8px;padding:2px 8px}
+
+.quick-transfer-reasons{display:flex;gap:8px;flex-wrap:wrap}.quick-transfer-reasons button{width:auto;background:transparent;color:inherit}.quick-transfer-reasons button[aria-pressed=true]{background:#a93612;color:#fff;border-color:#a93612}

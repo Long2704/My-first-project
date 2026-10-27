@@ -90,7 +90,7 @@ Kiểm thử: `npm run test:revenue` dùng PGlite cho quyền, biên ngày Việ
 
 ## Chuyển bàn
 
-Chạy `supabase/migrations/007_table_transfer.sql` sau 006 trước khi dùng giao diện chuyển bàn. Thu ngân/chủ chọn bàn có phiên khách → Chuyển Bàn N → chọn bàn trống → nhập lý do → Xác nhận chuyển bàn. Chuyển toàn bộ phiên, không gộp vào bàn đang có khách. Giá, món, ghi chú và thứ tự/trạng thái bếp được giữ nguyên; màn hình bếp và tổng tiền theo bàn mới sau đồng bộ. Báo trực tiếp bếp/phục vụ vị trí mới. Các hóa đơn đã trả trước đó giữ số bàn trong snapshot cũ.
+Chạy `supabase/migrations/007_table_transfer.sql` sau 006 trước khi dùng giao diện chuyển bàn. Thu ngân/chủ chọn bàn có phiên khách → Chuyển Bàn N → chọn bàn trống → chọn nhanh/nhập lý do nếu cần → Xác nhận chuyển bàn. Chuyển toàn bộ phiên, không gộp vào bàn đang có khách. Giá, món, ghi chú và thứ tự/trạng thái bếp được giữ nguyên; màn hình bếp và tổng tiền theo bàn mới sau đồng bộ. Báo trực tiếp bếp/phục vụ vị trí mới. Các hóa đơn đã trả trước đó giữ số bàn trong snapshot cũ.
 
 Gửi hoặc xóa các giỏ món đang chọn trước khi chuyển. Trên cùng thiết bị, yêu cầu chuyển chờ sẽ khóa gọi món/thanh toán/hủy món/đăng xuất cho đến khi xác nhận kết quả. App lưu mã yêu cầu theo tài khoản vào localStorage; mất phản hồi hoặc tải lại trang thì dùng Thử lại cùng mã chuyển bàn. Không xóa dữ liệu trình duyệt khi còn yêu cầu chờ. Nếu server từ chối vì bàn đích vừa có khách, app đồng bộ và cho chọn lại. Chưa hỗ trợ tự thử lại khi có mạng.
 
@@ -127,3 +127,9 @@ Không cần migration SQL mới. Mở Bếp → Bật chuông đơn mới để
 Cần trình duyệt hỗ trợ Web Audio. Chức năng không cài ứng dụng, không yêu cầu quyền thông báo và không gửi push. Giữ trang Bếp mở để nhận polling mỗi 5 giây; chuyển app/khóa máy có thể làm chậm đồng bộ và không bảo đảm chuông nền. Âm chỉ phát cho đơn mới nhận khi trang đang hiển thị. Thông báo Mới và các tùy chọn chỉ ở phiên trang hiện tại, không đồng bộ trạng thái đã xem giữa thiết bị.
 
 `npm run test:kitchen-tools` dùng Chromium với Supabase và API thiết bị giả lập: không báo đơn cũ, phát/tắt chuông, chống báo lặp khi đổi bàn, đánh dấu đã xem, điều hướng từ lịch sử, không có nút hoặc yêu cầu giữ sáng, đóng audio và thiết bị không hỗ trợ. Cần kiểm tra âm lượng thực tế trên điện thoại/tablet của quán.
+
+## Lý do chuyển bàn tùy chọn
+
+Chạy `supabase/migrations/010_optional_transfer_reason.sql` sau 009. Lý do chuyển bàn có thể để trống (tối đa 500 ký tự nếu nhập). Có nút chọn nhanh Khách yêu cầu, Cần bàn rộng hơn, Muốn chỗ mát hơn, Bàn cần dọn; bấm lại lý do đang chọn hoặc Xóa lý do để bỏ, vẫn có thể nhập nội dung riêng. Nhật ký hiển thị Không ghi lý do khi bỏ trống; lịch sử cũ được giữ nguyên. Yêu cầu chuyển chờ với lý do trống vẫn khôi phục và thử lại an toàn sau reload.
+
+Migration chỉ nới ràng buộc lý do và cập nhật RPC chuyển bàn; giữ nguyên quyền, kiểm tra bàn trống, khóa giao dịch và chống trùng. Kiểm thử `test:transfer` và `test:transfer-ui` gồm trống/null/bỏ tham số, giới hạn độ dài, chọn nhanh/sửa/xóa, lưu/khôi phục yêu cầu trống, nhật ký và các luồng chuyển bàn cũ.
