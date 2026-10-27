@@ -56,31 +56,34 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  await route.fulfill({status:200,json:body});
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
-await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).click();await page.getByRole('button',{name:'Thêm món mới',exact:true}).click();
+await management('Quản lý thực đơn');await page.getByRole('button',{name:'Thêm món mới',exact:true}).click();
 await page.getByLabel('Tên món',{exact:true}).fill('Nước sâm');await page.getByLabel('Giá bán (đồng)',{exact:true}).fill('-1');
 const save=page.getByRole('button',{name:'Lưu thực đơn',exact:true});assert.equal(await save.isDisabled(),true);
 await page.getByLabel('Giá bán (đồng)',{exact:true}).fill('15000');await page.getByLabel('Nhóm món',{exact:true}).selectOption('do_uong');await save.click();
 await page.getByRole('button',{name:'Thử lại cùng mã cập nhật',exact:true}).waitFor();
 assert.equal(await page.getByRole('button',{name:'Đăng xuất',exact:true}).isDisabled(),true);
-await page.reload();await page.getByRole('button',{name:'Thử lại cùng mã cập nhật',exact:true}).click();
+await page.reload();await page.getByRole('button',{name:'Mở quản lý thực đơn',exact:true}).click();await page.getByRole('button',{name:'Thử lại cùng mã cập nhật',exact:true}).click();
 await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();assert.equal(menuSaves.length,2);assert.equal(menuSaves[0].p_request_id,menuSaves[1].p_request_id);assert.equal(menu.filter(m=>m.name==='Nước sâm').length,1);
-await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Giá bán (đồng)',{exact:true}).fill('62000');await save.click();
+await management('Quản lý thực đơn');await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Giá bán (đồng)',{exact:true}).fill('62000');await save.click();
 await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();assert.equal(menu[0].price,62000);
-await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Hết món tạm thời',{exact:true}).check();await save.click();await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();
-await page.getByRole('button',{name:/^Bàn 1 /}).click();assert.equal(await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).count(),0);
+await management('Quản lý thực đơn');await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Hết món tạm thời',{exact:true}).check();await save.click();await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();
+await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.getByRole('button',{name:/^Bàn 1 /}).click();assert.equal(await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).count(),0);
 // Giá của đơn đã lưu không đổi sau sửa menu.
 assert.match(await page.getByRole('heading',{name:/Đơn đã lưu/}).innerText(),/61\.000đ/);
-await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Hết món tạm thời',{exact:true}).uncheck();await page.getByLabel('Đang bán',{exact:true}).uncheck();await save.click();await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();assert.equal(menu[0].is_active,false);
-await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Đang bán',{exact:true}).check();conflict=true;await save.click();
+await management('Quản lý thực đơn');await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Hết món tạm thời',{exact:true}).uncheck();await page.getByLabel('Đang bán',{exact:true}).uncheck();await save.click();await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();assert.equal(menu[0].is_active,false);
+await management('Quản lý thực đơn');await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Đang bán',{exact:true}).check();conflict=true;await save.click();
 await page.getByText('Món đã được cập nhật ở nơi khác.',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Thử lại cùng mã cập nhật',exact:true}).count(),0);
-await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Đang bán',{exact:true}).check();await save.click();await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();
-await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();
+await management('Quản lý thực đơn');await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Đang bán',{exact:true}).check();await save.click();await page.getByText('Đã lưu thực đơn.',{exact:false}).waitFor();
+await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();
 await page.getByRole('button',{name:'Gửi bếp',exact:true}).click();await page.getByText('Đơn chưa được lưu:',{exact:false}).waitFor();assert.equal(priceRejected,true);assert.equal(await page.getByRole('button',{name:'Thử gửi lại đơn này',exact:true}).count(),0);
 assert.equal(await page.evaluate(()=>localStorage.getItem('goc-pho-pending-v1:payment-test-user')),null);
 await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 // Menu thay đổi ở thiết bị khác: đồng bộ phải khóa giỏ chứa món hết.
-await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();menu[0].is_out=true;await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.getByText('Có món đang chọn đã hết hoặc ngừng bán.',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Gửi bếp',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
+await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();menu[0].is_out=true;await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.getByText('Có món đang chọn đã hết hoặc ngừng bán.',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Gửi bếp',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 role='thu_ngan';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
 assert.deepEqual(errors,[]);console.log('PASS: menu create/edit validation, durable retry/reload, price/out/stopped/reactivate, stale update rejection, preserved saved order, stale price rejection/recovery, live menu sync, mobile and owner-only controls. Mock Supabase only.');

@@ -49,13 +49,16 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  await route.fulfill({status:200,json:body});
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).click();
 // Không chuyển khi có giỏ món chưa gửi.
 await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();
-assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).isDisabled(),true);
+await tableActions();assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).isDisabled(),true);
 await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
-await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).click();
+await tableActions();await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).click();
 const target=page.getByLabel('Bàn đích',{exact:true});
 assert.equal(await target.locator('option[value="2"]').count(),0);assert.equal(await target.locator('option[value="1"]').count(),0);
 await target.selectOption('4');const confirm=page.getByRole('button',{name:'Xác nhận chuyển bàn',exact:true});assert.equal(await confirm.isDisabled(),false);
@@ -75,12 +78,12 @@ assert.match(await page.getByRole('button',{name:/^Bàn 1 /}).innerText(),/Trố
 assert.match(await page.getByRole('button',{name:/^Bàn 4 /}).innerText(),/61\.000đ/);
 await page.getByRole('button',{name:/^Bếp \(/}).click();await page.getByRole('heading',{name:'Bàn 4',exact:true}).waitFor();
 await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.getByRole('button',{name:/^Bàn 4 /}).click();
-await page.getByRole('button',{name:'Chuyển Bàn 4',exact:true}).click();await target.selectOption('5');await page.getByLabel('Lý do chuyển bàn',{exact:true}).fill('Đổi bàn');rejectMove=true;await confirm.click();
+await tableActions();await page.getByRole('button',{name:'Chuyển Bàn 4',exact:true}).click();await target.selectOption('5');await page.getByLabel('Lý do chuyển bàn',{exact:true}).fill('Đổi bàn');rejectMove=true;await confirm.click();
 await page.getByText('Bàn đích đang có khách. Chọn bàn trống khác.',{exact:true}).waitFor();
 assert.equal(await page.getByRole('button',{name:'Thử lại cùng mã chuyển bàn',exact:true}).count(),0);
 assert.equal(await page.evaluate(()=>localStorage.getItem('goc-pho-transfer-v1:payment-test-user')),null);
-rejectMove=false;await page.getByRole('button',{name:'Chuyển Bàn 4',exact:true}).click();await target.selectOption('5');await page.getByRole('button',{name:'Muốn chỗ mát hơn',exact:true}).click();await confirm.click();await page.getByText('Đã chuyển Bàn 4 sang Bàn 5.',{exact:false}).waitFor();assert.equal(moves.at(-1).p_reason,'Muốn chỗ mát hơn');
-await page.getByRole('button',{name:'Nhật ký hoạt động',exact:true}).click();await page.getByText('Bàn 1 → Bàn 4 · Lý do: Không ghi lý do',{exact:true}).waitFor();
+rejectMove=false;await tableActions();await page.getByRole('button',{name:'Chuyển Bàn 4',exact:true}).click();await target.selectOption('5');await page.getByRole('button',{name:'Muốn chỗ mát hơn',exact:true}).click();await confirm.click();await page.getByText('Đã chuyển Bàn 4 sang Bàn 5.',{exact:false}).waitFor();assert.equal(moves.at(-1).p_reason,'Muốn chỗ mát hơn');
+await management('Nhật ký hoạt động');await page.getByText('Bàn 1 → Bàn 4 · Lý do: Không ghi lý do',{exact:true}).waitFor();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 5 /}).click();assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 5',exact:true}).count(),0);
 assert.deepEqual(errors,[]);console.log('PASS: optional reason, presets/edit/clear, blank durable retry, transfer confirmation, draft blocking, occupied targets hidden, durable retry/reload, moved totals/kitchen, target conflict rejection, audit, mobile and service role. Mock Supabase only.');

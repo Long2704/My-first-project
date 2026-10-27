@@ -4,11 +4,12 @@ const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 type Day={day:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number};
 type Report={from:string;to:string;generated_at:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number;days:Day[];products:{name:string;qty:number;gross:number}[]};
-export default function RevenuePanel(){
+export default function RevenuePanel({active}:{active?:boolean}){
  const [open,setOpen]=useState(false),[from,setFrom]=useState(today),[to,setTo]=useState(today);
  const [report,setReport]=useState<Report|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const lock=useRef(false),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ useEffect(()=>{if(active)setOpen(true);},[active]);
  const span=(Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000;
  const valid=!!from&&!!to&&Number.isFinite(span)&&span>=0&&span<=365;
  async function load(){
@@ -23,8 +24,8 @@ export default function RevenuePanel(){
  }
  const stale=!!report&&(report.from!==from||report.to!==to);
  return <section className="revenue-panel" aria-label="Báo cáo doanh thu">
- <button aria-expanded={open} onClick={()=>setOpen(v=>!v)}>Báo cáo doanh thu</button>
- {open&&<><h2>Báo cáo doanh thu</h2><p>Theo ngày thanh toán, giờ Việt Nam. Tiền thực thu sau giảm giá; chưa tính chi phí hoặc lợi nhuận.</p>
+ {active===undefined&&<button aria-expanded={open} onClick={()=>setOpen(v=>!v)}>Báo cáo doanh thu</button>}
+ {open&&<>{active===undefined&&<h2>Báo cáo doanh thu</h2>}<p>Theo ngày thanh toán, giờ Việt Nam. Tiền thực thu sau giảm giá; chưa tính chi phí hoặc lợi nhuận.</p>
  <form className="report-form" onSubmit={e=>{e.preventDefault();void load();}}>
  <label>Từ ngày<input type="date" required value={from} disabled={busy} onChange={e=>setFrom(e.target.value)}/></label>
  <label>Đến ngày<input type="date" required value={to} disabled={busy} onChange={e=>setTo(e.target.value)}/></label>

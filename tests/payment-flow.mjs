@@ -38,6 +38,9 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  await route.fulfill({status:200,json:body});
 });
 const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).click();await page.getByRole('button',{name:'Thanh toán Bàn 1',exact:true}).click();
 let dialog=page.getByRole('dialog');await dialog.waitFor();
@@ -70,7 +73,7 @@ await page.getByRole('button',{name:/^Bàn 3 /}).click();await page.getByRole('b
 stale=true;await dialog.getByRole('button',{name:'Xác nhận thu tiền mặt',exact:true}).click();await dialog.getByText('Danh sách món đã thay đổi.',{exact:false}).waitFor();
 assert.equal(bills.length,2);assert.equal(await page.evaluate(()=>localStorage.getItem('goc-pho-payment-v1:payment-test-user')),null);
 await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
-await page.getByRole('button',{name:'Hóa đơn gần đây',exact:true}).click();await page.getByRole('button',{name:/^#1 /}).click();await page.getByRole('button',{name:'In hóa đơn',exact:true}).waitFor();
+await management('Hóa đơn gần đây');await page.getByRole('button',{name:/^#1 /}).click();await page.getByRole('button',{name:'In hóa đơn',exact:true}).waitFor();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
 role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 3 /}).click();assert.equal(await page.getByRole('button',{name:'Thanh toán Bàn 3',exact:true}).count(),0);
