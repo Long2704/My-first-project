@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, tách/gộp bàn, mang về, quẹt đơn, giữ sáng màn hình và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, tách/gộp bàn, mang về, giữ sáng màn hình và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -70,13 +70,13 @@ Hóa đơn lấy từ snapshot trong database, không tính lại theo menu hi�
 
 ## Hủy món và nhật ký
 
-Chạy `supabase/migrations/005_cancellations_audit.sql` sau 004 trước khi dùng mã mới. Thu ngân/chủ chọn bàn → Hủy tên món → nhập lý do → Xác nhận hủy món. Hủy toàn bộ dòng chưa trả tiền, kể cả món đã ra; không hoàn tiền món đã thanh toán. Nếu mất phản hồi, thử lại cùng món là an toàn. Món được giữ nguyên để đối chiếu, loại khỏi tổng tiền và danh sách bếp. Hủy hết món chưa trả sẽ đóng phiên; nhật ký vẫn còn. Cần báo trực tiếp cho bếp nếu đã chuẩn bị món.
+Chạy `supabase/migrations/005_cancellations_audit.sql` sau 004 trước khi dùng mã mới. Thu ngân/chủ chọn bàn → Hủy tên món → xác nhận trong pop-up (sau migration 011, không nhập lý do). Hủy toàn bộ dòng chưa trả tiền, kể cả món đã ra; không hoàn tiền món đã thanh toán. Nếu mất phản hồi, thử lại cùng món là an toàn. Món được giữ nguyên để đối chiếu, loại khỏi tổng tiền và danh sách bếp. Hủy hết món chưa trả sẽ đóng phiên; nhật ký vẫn còn. Cần báo trực tiếp cho bếp nếu đã chuẩn bị món.
 
 Nhật ký hoạt động dành cho thu ngân/chủ: 100 sự kiện mới nhất theo bộ lọc, giờ Việt Nam, mã nhân viên, lý do hủy và thông tin thanh toán. Ghi tự động phía server cho gửi đơn, hoàn thành bếp, hủy món và thanh toán; không tạo bù lịch sử gửi đơn/bếp trước migration 005. Client không được sửa/xóa nhật ký.
 
 `npm run test:cancellations` kiểm tra migration, phân quyền, hủy lặp, lý do, tổng tiền sau hủy, snapshot thanh toán cũ và đóng phiên trên PGlite.
 
-`npm run test:cancellation-ui` kiểm thử giao diện hủy, lý do bắt buộc, thử lại khi mất phản hồi, tổng còn lại, lọc bếp và nhật ký trên Chromium với Supabase giả lập. Cần dev server cấu hình endpoint giống các bài kiểm thử trình duyệt hiện có.
+`npm run test:cancellation-ui` kiểm thử pop-up hủy món không lý do, thử lại khi mất phản hồi, tổng còn lại, lọc bếp và nhật ký trên Chromium với Supabase giả lập. Cần dev server cấu hình endpoint giống các bài kiểm thử trình duyệt hiện có.
 
 ## Báo cáo doanh thu
 
@@ -90,7 +90,7 @@ Kiểm thử: `npm run test:revenue` dùng PGlite cho quyền, biên ngày Việ
 
 ## Chuyển bàn
 
-Chạy `supabase/migrations/007_table_transfer.sql` sau 006 trước khi dùng giao diện chuyển bàn. Thu ngân/chủ chọn bàn có phiên khách → Chuyển Bàn N → chọn bàn trống → nhập lý do → Xác nhận chuyển bàn. Chuyển toàn bộ phiên, không gộp vào bàn đang có khách. Giá, món, ghi chú và thứ tự/trạng thái bếp được giữ nguyên; màn hình bếp và tổng tiền theo bàn mới sau đồng bộ. Báo trực tiếp bếp/phục vụ vị trí mới. Các hóa đơn đã trả trước đó giữ số bàn trong snapshot cũ.
+Chạy `supabase/migrations/007_table_transfer.sql` sau 006 trước khi dùng giao diện chuyển bàn. Thu ngân/chủ chọn bàn có phiên khách → Chuyển Bàn N → chọn bàn trống → Xác nhận chuyển bàn (sau migration 011, không nhập lý do). Chuyển toàn bộ phiên, không gộp vào bàn đang có khách. Giá, món, ghi chú và thứ tự/trạng thái bếp được giữ nguyên; màn hình bếp và tổng tiền theo bàn mới sau đồng bộ. Báo trực tiếp bếp/phục vụ vị trí mới. Các hóa đơn đã trả trước đó giữ số bàn trong snapshot cũ.
 
 Gửi hoặc xóa các giỏ món đang chọn trước khi chuyển. Trên cùng thiết bị, yêu cầu chuyển chờ sẽ khóa gọi món/thanh toán/hủy món/đăng xuất cho đến khi xác nhận kết quả. App lưu mã yêu cầu theo tài khoản vào localStorage; mất phản hồi hoặc tải lại trang thì dùng Thử lại cùng mã chuyển bàn. Không xóa dữ liệu trình duyệt khi còn yêu cầu chờ. Nếu server từ chối vì bàn đích vừa có khách, app đồng bộ và cho chọn lại. Chưa hỗ trợ tự thử lại khi có mạng.
 
@@ -135,3 +135,15 @@ Màn hình Phục vụ tập trung vào sơ đồ bàn, tìm bàn và lọc Tr�
 Menu Quản lý trên thanh điều hướng mở các màn hình riêng: Quản lý thực đơn (chủ quán), Báo cáo doanh thu, Nhật ký hoạt động và Hóa đơn gần đây (chủ/thu ngân). Không còn xếp các bảng quản lý lên màn hình Phục vụ. Hóa đơn được mở bằng hộp thoại chung để xem/in lại từ màn hình hóa đơn. Các yêu cầu chờ vẫn giữ nguyên khi chuyển màn hình; thông báo dẫn về nơi xử lý nếu có cập nhật menu hoặc thao tác bàn chưa xác nhận. Giỏ món chưa gửi được giữ khi đổi màn hình trong cùng phiên trang.
 
 Không có migration SQL cho bố cục này. `npm run test:layout` kiểm tra dashboard, bộ lọc/tìm bàn, thao tác theo ngữ cảnh, đổi màn hình giữ giỏ, xem/in hóa đơn, khôi phục thanh toán chờ và kích thước desktop/mobile bằng Chromium/Supabase giả lập. Các bài kiểm thử luồng đã chuyển sang menu Quản lý và Thao tác bàn tương ứng.
+
+## Hủy món/bàn không lý do, vuốt bếp và đường đi bàn
+
+Chạy `supabase/migrations/011_cancellations_kitchen_history.sql` sau 009 hoặc 010. Tệp 011 đã bao gồm việc bỏ ràng buộc lý do của 010; không cần chạy 010 riêng nếu chưa chạy. Migration giữ lịch sử cũ, cho phép hủy món không lý do, thêm hủy phiên bàn có snapshot và đường đi bàn trên table_sessions.
+
+Chuyển bàn chỉ chọn bàn đích rồi xác nhận; không còn ô hoặc nút chọn lý do. Hủy món mở pop-up có tên/số lượng/tiền, Quay lại và Xác nhận hủy món. Không nhập lý do. Giữ nguyên quyền thu ngân/chủ; món đã trả không được hủy. Yêu cầu hủy dòng món thử lại theo cùng item id, không hủy trùng.
+
+Trong Thao tác bàn có Hủy cả Bàn N. Pop-up liệt kê toàn bộ dòng món chưa trả của phiên qua tất cả bill. Xác nhận sẽ hủy các dòng đó, đóng phiên khi xong, giữ hóa đơn và món đã trả. Nếu còn món đã trả nhưng bếp chưa làm xong thì các món đó vẫn ở bếp. Server kiểm tra chính xác danh sách đã xác nhận; có món mới/đã trả/đã hủy ở thiết bị khác thì từ chối và yêu cầu xác nhận lại. Lưu request_id và snapshot trong localStorage để thử lại an toàn sau mất phản hồi/reload, kể cả bàn đã đón lượt khách mới. Không xóa bộ nhớ trình duyệt khi còn yêu cầu chờ.
+
+Bếp vuốt đơn sang trái hoặc phải đủ xa rồi thả để hoàn thành. Cuộn dọc, vuốt ngắn, nút bấm, lịch sử và vai trò phục vụ không hoàn thành bằng vuốt. Nút Xong vẫn dùng được bằng bàn phím. Đường đi hiển thị dạng Bàn 1 → Bàn 2 → Bàn 5; lưu phía server và không thêm mốc lặp khi thử lại cùng mã chuyển. Lịch sử trước nâng cấp được dựng từ các lần chuyển đã ghi theo thời điểm, lịch sử mới được nối nguyên tử cùng giao dịch chuyển bàn.
+
+`test:table-cancel` kiểm tra nâng cấp trực tiếp từ 009 và sau 010, lịch sử/retry, hủy món không lý do, hủy bàn theo quyền/snapshot, giữ món đã trả/hóa đơn, đóng bàn, chống hủy nhầm lượt khách mới. `test:table-workflows` kiểm thử trình duyệt: không có ô lý do, đường đi 1→2→5, vuốt hai chiều, cuộn dọc/vuốt ngắn/lịch sử/phân quyền, pop-up hủy bàn, snapshot cũ và thử lại sau reload. SQL dùng PGlite, UI và thao tác chuột dùng Chromium/Supabase giả lập; chưa kiểm chứng nhiều phiên database đồng thời hay vuốt cảm ứng trên tablet thực tế.

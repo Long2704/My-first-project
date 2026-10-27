@@ -1,6 +1,6 @@
 export type OrderLine = {id:string; name:string; price:number; qty:number; category:string; note:string; paid:boolean; bill_no:number; cancelled_at?:string|null; cancel_reason?:string|null};
 export type Order = {id:string; request_id:string; session_id:string; status:'cooking'|'done'; kitchen_relevant:boolean; created_at:string; order_items:OrderLine[]};
-export type TableSession = {id:string; table_id:number; orders:Order[]};
+export type TableSession = {id:string; table_id:number; table_path?:number[]; orders:Order[]};
 export function savedTotal(sessions:TableSession[], tableId:number){
  return sessions.filter(s=>s.table_id===tableId).reduce((sum,s)=>sum+s.orders.reduce((n,o)=>n+o.order_items.filter(i=>!i.paid&&!i.cancelled_at).reduce((v,i)=>v+i.price*i.qty,0),0),0);
 }

@@ -21,7 +21,9 @@
     "test:bills": "node tests/bills-sql.mjs",
     "test:bills-ui": "node tests/bills-flow.mjs",
     "test:kitchen-tools": "node tests/kitchen-tools-flow.mjs",
-    "test:layout": "node tests/layout-flow.mjs"
+    "test:layout": "node tests/layout-flow.mjs",
+    "test:table-cancel": "node tests/table-cancel-sql.mjs",
+    "test:table-workflows": "node tests/table-workflows-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
