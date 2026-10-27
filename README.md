@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, tách/gộp bàn hoặc bill, mang về, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, tách/gộp bàn, mang về, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -58,7 +58,7 @@ RPC pay_bill chỉ cho thu ngân/chủ. Giá lấy từ order_items đã lưu; k
 
 ## Thanh toán trên giao diện
 
-Chạy migration 004 trước khi dùng. Chọn bàn → Thanh toán Bàn N. Gửi hoặc xóa các món đang chọn trước khi thanh toán. Hiện hỗ trợ thanh toán toàn bộ Bill 1; chưa có giao diện tách/gộp bill.
+Chạy migration 004 trước khi dùng. Chọn bàn → Thanh toán Bàn N. Gửi hoặc xóa các món đang chọn trước khi thanh toán. Sau migration 009, chọn Bill thanh toán để thu riêng từng bill; mỗi lượt thu toàn bộ món chưa trả của bill đã chọn.
 
 Giảm giá: nhập `10%` hoặc `10000`, nhập `0` để bỏ; chỉ hỗ trợ số nguyên, không dấu phân cách hàng nghìn. Chọn tiền mặt hoặc chuyển khoản. Tiền mặt: để trống tiền khách đưa để mặc định bằng số phải thu, hoặc nhập `100000`; app hiển thị tiền thối. Chuyển khoản: thu ngân phải kiểm tra giao dịch ngân hàng trước khi xác nhận; app không tự xác minh chuyển khoản.
 
@@ -107,3 +107,15 @@ Chạy `supabase/migrations/008_menu_management.sql` sau 007. Chủ quán mở Q
 Gửi/xóa món đang chọn trước khi chỉnh menu. Trước khi lưu, app giữ request_id và dữ liệu cập nhật trong localStorage theo tài khoản; mất phản hồi hoặc reload thì dùng Thử lại cùng mã cập nhật. Không tạo lại món bằng mã khác khi chưa xác nhận. Phiên bản menu bảo vệ việc hai thiết bị cùng sửa: người lưu sau phải tải lại món đã đổi, tránh ghi đè thầm lặng. Nhật ký ghi thao tác và giá trị trước/sau.
 
 `npm run test:menu` kiểm tra SQL PGlite: quyền chủ, thêm/sửa lặp, phiên bản cũ, dữ liệu sai, kiểm tra giá gửi đơn, hết/ngừng bán và snapshot đơn/hóa đơn. `npm run test:menu-ui` kiểm tra Chromium với Supabase giả lập: tạo/sửa, tải lại sau mất phản hồi, xung đột, ẩn món, đồng bộ menu, phục hồi giỏ khi giá đổi, mobile và ẩn quản lý với thu ngân. Chưa kiểm thử Supabase thật hoặc nhiều phiên PostgreSQL đồng thời.
+
+## Tách/gộp bill và thu riêng
+
+Chạy `supabase/migrations/009_split_bills.sql` sau 008. Thu ngân/chủ chọn bàn → Tách/gộp bill Bàn N → chọn Bill nguồn → tích dòng món → chọn Bill mới hoặc bill đang chưa trả cùng phiên → nhập lý do → Xác nhận tách/gộp bill. Chuyển cả số lượng của dòng; chưa chia số lượng trong cùng một dòng, chưa chia đều tiền và chưa gộp giữa các bàn. Chọn tất cả dòng để gộp toàn bill. Chỉ chuyển dòng chưa thanh toán và chưa hủy. Món, giá, ghi chú, đợt đơn và thứ tự/trạng thái bếp không đổi.
+
+Chọn Bill thanh toán, kiểm tra số bill và món trong hộp xác nhận trước khi thu. Mỗi bill có giảm giá, phương thức trả và hóa đơn riêng. Bàn còn mở và tổng tiền bàn chỉ còn các món chưa trả sau khi thu một bill. Bàn chỉ đóng khi không còn món chưa trả (hoặc đã hủy hết số còn lại). Món bếp đã trả tiền vẫn tiếp tục làm. Hóa đơn và danh sách hóa đơn gần đây có số Bill. Báo cáo doanh thu cộng các hóa đơn đã trả, không đếm tiền chưa trả hoặc thao tác tách/gộp.
+
+Món gọi thêm mặc định vào bill chưa trả có số nhỏ nhất; có thể chuyển sau đó bằng tách/gộp. Số bill mới luôn lớn hơn số bill từng có trong phiên, không dùng lại bill đã thanh toán. Trường hợp chỉ còn Bill 2 chưa trả, gọi thêm sẽ vào Bill 2.
+
+RPC khóa bàn/phiên/dòng món, xác thực tất cả dòng cùng nguồn và cùng phiên, lưu request_id và ghi nhật ký trong cùng giao dịch. Không được ghi trực tiếp bảng bill_moves từ client. Trước khi gửi, app lưu mã tách/gộp trong localStorage theo tài khoản; mất phản hồi hoặc reload thì dùng Thử lại cùng mã tách/gộp. Không xóa bộ nhớ trình duyệt khi còn yêu cầu chờ. Mã thanh toán cũng giữ số bill đã chọn qua reload; dữ liệu thanh toán chờ từ bản cũ vẫn mặc định Bill 1. Nếu món/bill bị thay đổi ở thiết bị khác, server từ chối yêu cầu mới và app yêu cầu chọn lại.
+
+`npm run test:bills` kiểm tra PGlite: quyền, dữ liệu sai, tách/gộp lặp, giữ món/bếp, từ chối snapshot thanh toán cũ, thu riêng và giảm giá, giữ bàn mở, gọi thêm vào bill chưa trả, món đã trả/hủy, bill đích và thử lại sau khi đóng bàn. `npm run test:bills-ui` kiểm tra Chromium với Supabase giả lập: lựa chọn, tách/gộp, reload/thử lại, thanh toán Bill 2 giữ đúng mã/số bill, số dư bàn, nhật ký và mobile. Chưa kiểm chứng Supabase thật hoặc nhiều phiên PostgreSQL đồng thời.
