@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -87,3 +87,13 @@ Báo cáo tính theo `bills.paid_at` ở múi giờ Asia/Ho_Chi_Minh. Tổng th�
 Tổng, từng ngày và món bán được lấy cùng một snapshot phía database, không bị giới hạn 30/100 hóa đơn như các danh sách gần đây. RPC kiểm tra quyền chủ/thu ngân trên server. Nếu chưa chạy migration 006, giao diện báo cần cập nhật database và các luồng POS hiện có vẫn dùng bình thường. Đổi ngày hoặc tải lỗi sẽ không hiển thị số liệu của khoảng cũ dưới ngày mới.
 
 Kiểm thử: `npm run test:revenue` dùng PGlite cho quyền, biên ngày Việt Nam, tổng tiền, giảm giá và khoảng ngày. `npm run test:revenue-ui` dùng Chromium/dev server và Supabase giả lập cho bộ lọc ngày, số liệu, lỗi kết nối/migration, dữ liệu trống và màn hình điện thoại. Chưa kiểm thử trên Supabase thật.
+
+## Chuyển bàn
+
+Chạy `supabase/migrations/007_table_transfer.sql` sau 006 trước khi dùng giao diện chuyển bàn. Thu ngân/chủ chọn bàn có phiên khách → Chuyển Bàn N → chọn bàn trống → nhập lý do → Xác nhận chuyển bàn. Chuyển toàn bộ phiên, không gộp vào bàn đang có khách. Giá, món, ghi chú và thứ tự/trạng thái bếp được giữ nguyên; màn hình bếp và tổng tiền theo bàn mới sau đồng bộ. Báo trực tiếp bếp/phục vụ vị trí mới. Các hóa đơn đã trả trước đó giữ số bàn trong snapshot cũ.
+
+Gửi hoặc xóa các giỏ món đang chọn trước khi chuyển. Trên cùng thiết bị, yêu cầu chuyển chờ sẽ khóa gọi món/thanh toán/hủy món/đăng xuất cho đến khi xác nhận kết quả. App lưu mã yêu cầu theo tài khoản vào localStorage; mất phản hồi hoặc tải lại trang thì dùng Thử lại cùng mã chuyển bàn. Không xóa dữ liệu trình duyệt khi còn yêu cầu chờ. Nếu server từ chối vì bàn đích vừa có khách, app đồng bộ và cho chọn lại. Chưa hỗ trợ tự thử lại khi có mạng.
+
+RPC khóa hai bàn theo thứ tự id rồi khóa phiên khách, kiểm tra phiên còn mở, bàn nguồn còn đúng và bàn đích còn trống; ghi chuyển bàn và nhật ký cùng giao dịch. Migration lưu bàn gốc của đơn để gửi lại mã đơn cũ sau chuyển không bị trùng. Thanh toán/hủy kiểm tra lại vị trí phiên sau khi lấy khóa để từ chối dữ liệu vừa bị thay đổi. Một thiết bị khác vẫn có thể giữ giỏ chưa gửi ở bàn cũ: giỏ chưa gửi chưa đồng bộ giữa thiết bị, vì vậy cần báo nhân viên kiểm tra lại bàn trước khi gửi.
+
+`npm run test:transfer` kiểm tra PGlite: phân quyền, bàn trùng/bận/ngừng hoạt động, giữ món/bếp, thử lại, gửi lại đơn bàn gốc sau chuyển, tái sử dụng bàn nguồn, hủy/thanh toán/hoàn thành sau chuyển, snapshot bàn trên hóa đơn và nhật ký. `npm run test:transfer-ui` kiểm tra Chromium với Supabase giả lập: xác nhận/lý do, chặn giỏ nháp, thử lại sau reload, tổng tiền và bếp theo bàn mới, xung đột bàn đích, nhật ký và mobile. Chưa kiểm chứng nhiều phiên PostgreSQL đồng thời hoặc Supabase thật.

@@ -18,7 +18,7 @@ insert into public.profiles values ('00000000-0000-0000-0000-000000000001','Owne
 insert into public.restaurant_tables(id,name) values (1,'Bàn 1'),(2,'Bàn 2');
 insert into public.menu_items(id,name,price,category) values ('10000000-0000-0000-0000-000000000001','Bún riêu',58000,'bun'),('10000000-0000-0000-0000-000000000002','Trà đá',3000,'do_uong');
 `);
-for(const file of ['003_ordering.sql','004_payments.sql','005_cancellations_audit.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+for(const file of ['003_ordering.sql','004_payments.sql','005_cancellations_audit.sql','006_revenue_report.sql','007_table_transfer.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
 const user=async n=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[`00000000-0000-0000-0000-00000000000${n}`]);await db.exec('set role authenticated');};
 const one=async(sql,p=[])=> (await db.query(sql,p)).rows[0];
 await user(1);
