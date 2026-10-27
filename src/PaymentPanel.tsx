@@ -30,7 +30,7 @@ export default function PaymentPanel({userId,table,sessions,canPay,hasDraft,onPe
  const cashNumber=cash.trim()===''?total:integer(cash);
  const valid=!!reduction&&(method==='transfer'||(cashNumber!==null&&cashNumber>=total));
  const current=table?sessions.find(s=>s.table_id===table.id):undefined;
- const payable=current?.orders.flatMap(o=>o.order_items).filter(i=>!i.paid&&i.bill_no===1)??[];
+ const payable=current?.orders.flatMap(o=>o.order_items).filter(i=>!i.paid&&!i.cancelled_at&&i.bill_no===1)??[];
  function start(){if(!current||!table||hasDraft||pending)return;setDraft({sessionId:current.id,tableId:table.id,items:payable.map(i=>({...i}))});setDiscount('0');setCash('');setMethod('cash');setError('');setReceipt(null);setOpen(true);}
  async function loadReceipt(id:string){
   const r=await supabase!.from('bills').select('id,invoice_no,table_no,gross,discount,total,method,cash_received,change_due,paid_at,bill_items(id,name,price,qty,note)').eq('id',id).single();

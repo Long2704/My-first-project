@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy món, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, báo cáo, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, báo cáo, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -67,3 +67,13 @@ Trước khi gửi, app lưu mã thanh toán cùng danh sách món và thông ti
 Hóa đơn lấy từ snapshot trong database, không tính lại theo menu hiện tại. Có tiền khách đưa và tiền thối nếu trả tiền mặt. In hóa đơn dùng window.print với CSS chỉ in nội dung hóa đơn; chưa tích hợp máy in nhiệt tự động. Nút Hóa đơn gần đây tải 30 hóa đơn mới nhất và mở/in lại. Mốc giờ hóa đơn hiển thị theo Asia/Ho_Chi_Minh.
 
 `npm run test:payments` (cần dev server và Chromium như test:browser) kiểm thử giao diện bằng Supabase giả lập: tiền thiếu, giảm phần trăm/số tiền, tiền thối, giữ mã khi mất phản hồi/reload, chỉ tải lại hóa đơn sau thanh toán, chuyển khoản, từ chối snapshot cũ, bàn trống và giữ đơn bếp, mở lại hóa đơn, CSS in và ẩn thanh toán với phục vụ. Không tạo thanh toán thật trên Supabase và chưa kiểm chứng bản in vật lý.
+
+## Hủy món và nhật ký
+
+Chạy `supabase/migrations/005_cancellations_audit.sql` sau 004 trước khi dùng mã mới. Thu ngân/chủ chọn bàn → Hủy tên món → nhập lý do → Xác nhận hủy món. Hủy toàn bộ dòng chưa trả tiền, kể cả món đã ra; không hoàn tiền món đã thanh toán. Nếu mất phản hồi, thử lại cùng món là an toàn. Món được giữ nguyên để đối chiếu, loại khỏi tổng tiền và danh sách bếp. Hủy hết món chưa trả sẽ đóng phiên; nhật ký vẫn còn. Cần báo trực tiếp cho bếp nếu đã chuẩn bị món.
+
+Nhật ký hoạt động dành cho thu ngân/chủ: 100 sự kiện mới nhất theo bộ lọc, giờ Việt Nam, mã nhân viên, lý do hủy và thông tin thanh toán. Ghi tự động phía server cho gửi đơn, hoàn thành bếp, hủy món và thanh toán; không tạo bù lịch sử gửi đơn/bếp trước migration 005. Client không được sửa/xóa nhật ký.
+
+`npm run test:cancellations` kiểm tra migration, phân quyền, hủy lặp, lý do, tổng tiền sau hủy, snapshot thanh toán cũ và đóng phiên trên PGlite.
+
+`npm run test:cancellation-ui` kiểm thử giao diện hủy, lý do bắt buộc, thử lại khi mất phản hồi, tổng còn lại, lọc bếp và nhật ký trên Chromium với Supabase giả lập. Cần dev server cấu hình endpoint giống các bài kiểm thử trình duyệt hiện có.
