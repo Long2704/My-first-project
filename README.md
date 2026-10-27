@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, báo cáo, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -77,3 +77,13 @@ Nhật ký hoạt động dành cho thu ngân/chủ: 100 sự kiện mới nhấ
 `npm run test:cancellations` kiểm tra migration, phân quyền, hủy lặp, lý do, tổng tiền sau hủy, snapshot thanh toán cũ và đóng phiên trên PGlite.
 
 `npm run test:cancellation-ui` kiểm thử giao diện hủy, lý do bắt buộc, thử lại khi mất phản hồi, tổng còn lại, lọc bếp và nhật ký trên Chromium với Supabase giả lập. Cần dev server cấu hình endpoint giống các bài kiểm thử trình duyệt hiện có.
+
+## Báo cáo doanh thu
+
+Chạy `supabase/migrations/006_revenue_report.sql` sau 005. Migration chỉ thêm RPC đọc báo cáo, không sửa dữ liệu hóa đơn. Chủ quán/thu ngân mở Báo cáo doanh thu, chọn Từ ngày/Đến ngày (bao gồm cả hai ngày, tối đa 366 ngày), rồi bấm Xem báo cáo. Có nút Hôm nay và Tháng này; các nút chọn ngày cần bấm Xem báo cáo để tải.
+
+Báo cáo tính theo `bills.paid_at` ở múi giờ Asia/Ho_Chi_Minh. Tổng thực thu sau giảm giá, số hóa đơn, tiền trước giảm giá, giảm giá, tiền mặt/chuyển khoản, doanh thu từng ngày và 20 tên món bán nhiều nhất. Tiền mặt là số phải thu trên hóa đơn, không phải tiền khách đưa trước khi thối. Món bán lấy từ snapshot bill_items, tiền món trước giảm giá chung hóa đơn; các món cùng tên được gộp. Không tính đơn chưa thanh toán hoặc món hủy trước thanh toán. Đây là doanh thu, chưa trừ chi phí và chưa phải lợi nhuận. Ngày không có hóa đơn không hiện thành dòng riêng.
+
+Tổng, từng ngày và món bán được lấy cùng một snapshot phía database, không bị giới hạn 30/100 hóa đơn như các danh sách gần đây. RPC kiểm tra quyền chủ/thu ngân trên server. Nếu chưa chạy migration 006, giao diện báo cần cập nhật database và các luồng POS hiện có vẫn dùng bình thường. Đổi ngày hoặc tải lỗi sẽ không hiển thị số liệu của khoảng cũ dưới ngày mới.
+
+Kiểm thử: `npm run test:revenue` dùng PGlite cho quyền, biên ngày Việt Nam, tổng tiền, giảm giá và khoảng ngày. `npm run test:revenue-ui` dùng Chromium/dev server và Supabase giả lập cho bộ lọc ngày, số liệu, lỗi kết nối/migration, dữ liệu trống và màn hình điện thoại. Chưa kiểm thử trên Supabase thật.
