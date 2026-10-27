@@ -1,0 +1,74 @@
+import {PGlite} from '@electric-sql/pglite';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+for(const includeOptional of [false,true]){
+const db=new PGlite();
+try{
+await db.exec(`
+create role anon; create role authenticated;
+create schema auth;
+create table auth.users(id uuid primary key);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
+grant usage on schema auth to authenticated,anon;
+create table public.profiles(id uuid primary key references auth.users(id), name text not null, role text not null);
+create table public.menu_items(id uuid primary key default gen_random_uuid(),name text not null,price integer not null,category text not null,is_active boolean default true,is_out boolean default false,sort integer default 0);
+create table public.restaurant_tables(id integer primary key, name text not null,is_active boolean default true);
+create function public.current_staff_role() returns text language sql stable security definer set search_path='' as $$ select role from public.profiles where id=auth.uid() $$;
+insert into auth.users values ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002'),('00000000-0000-0000-0000-000000000003');
+insert into public.profiles values ('00000000-0000-0000-0000-000000000001','Owner','chu'),('00000000-0000-0000-0000-000000000002','Service','phuc_vu'),('00000000-0000-0000-0000-000000000003','Kitchen','bep');
+insert into public.restaurant_tables(id,name) values (1,'Bàn 1'),(2,'Bàn 2');
+insert into public.menu_items(id,name,price,category) values ('10000000-0000-0000-0000-000000000001','Bún riêu',58000,'bun'),('10000000-0000-0000-0000-000000000002','Trà đá',3000,'do_uong');
+`);
+for(const file of ['003_ordering.sql','004_payments.sql','005_cancellations_audit.sql','006_revenue_report.sql','007_table_transfer.sql','008_menu_management.sql','009_split_bills.sql','010_optional_transfer_reason.sql'].filter(f=>includeOptional||!f.startsWith('010')))await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+const user=async n=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[`00000000-0000-0000-0000-00000000000${n}`]);await db.exec('set role authenticated');};
+const one=async(sql,p=[])=> (await db.query(sql,p)).rows[0];
+await db.exec("insert into public.restaurant_tables(id,name) values (5,'Bàn 5');insert into auth.users values('00000000-0000-0000-0000-000000000004');insert into public.profiles values('00000000-0000-0000-0000-000000000004','Cashier','thu_ngan');");
+await user(1);
+const food='10000000-0000-0000-0000-000000000001',drink='10000000-0000-0000-0000-000000000002';
+const order=(await one('select public.submit_order(1,gen_random_uuid(),$1::jsonb) id',[JSON.stringify([{menu_item_id:food,qty:2},{menu_item_id:drink,qty:1}])])).id;
+const session=(await one('select session_id from public.orders where id=$1',[order])).session_id;
+const firstReq='80000000-0000-0000-0000-000000000001';
+await db.query('select public.transfer_table($1,1,2,$2,$3)',[session,firstReq,'Lịch sử cũ']);
+await db.query("select public.transfer_table($1,2,5,gen_random_uuid(),'Trước nâng cấp')",[session]);
+await db.exec('reset role');await db.exec(readFileSync(new URL('../supabase/migrations/011_cancellations_kitchen_history.sql',import.meta.url),'utf8'));await user(1);
+assert.deepEqual((await one('select table_path from public.table_sessions where id=$1',[session])).table_path,[1,2,5]);
+const nextReq='80000000-0000-0000-0000-000000000002';
+await db.query('select public.transfer_table($1,5,1,$2)',[session,nextReq]);await db.query('select public.transfer_table($1,5,1,$2)',[session,nextReq]);
+assert.deepEqual((await one('select table_path from public.table_sessions where id=$1',[session])).table_path,[1,2,5,1]);
+await db.query('select public.transfer_table($1,1,2,$2,$3)',[session,firstReq,'Lịch sử cũ']);
+assert.equal((await one('select table_id from public.table_sessions where id=$1',[session])).table_id,1);
+const original=(await db.query('select * from public.order_items where order_id=$1',[order])).rows;
+const foodId=original.find(i=>i.category==='bun').id,drinkId=original.find(i=>i.category==='do_uong').id;
+await db.query('select public.cancel_order_item($1)',[foodId]);await db.query('select public.cancel_order_item($1,$2)',[foodId,null]);
+assert.equal((await one('select cancel_reason from public.order_items where id=$1',[foodId])).cancel_reason,'');
+const cancelReq='90000000-0000-0000-0000-000000000001';
+const cancel=(ids=[drinkId],r=cancelReq,s=session)=>db.query('select public.cancel_table_session($1,$2,$3::uuid[])',[s,r,ids]);
+await user(2);await assert.rejects(cancel(),/không có quyền/);await user(3);await assert.rejects(cancel(),/không có quyền/);await user(1);
+await assert.rejects(cancel([foodId,drinkId]),/đã thay đổi/);
+const extra=(await one('select public.submit_order(1,gen_random_uuid(),$1::jsonb) id',[JSON.stringify([{menu_item_id:food,qty:1}])])).id;
+const extraId=(await one('select id from public.order_items where order_id=$1',[extra])).id;
+await assert.rejects(cancel(),/đã thay đổi/);assert.equal((await one('select cancelled_at from public.order_items where id=$1',[drinkId])).cancelled_at,null);
+await db.query('select public.move_bill_items($1,gen_random_uuid(),1,0,$2::uuid[],$3)',[session,[extraId],'Trả riêng']);
+const bill=(await one("select public.pay_bill($1,gen_random_uuid(),'cash',$2::uuid[],2) id",[session,[extraId]])).id;
+await cancel();await cancel();
+assert.notEqual((await one('select closed_at from public.table_sessions where id=$1',[session])).closed_at,null);
+assert.equal((await one('select cancelled_at from public.order_items where id=$1',[extraId])).cancelled_at,null);
+assert.equal((await one('select status from public.orders where id=$1',[extra])).status,'cooking');
+assert.equal((await one('select total from public.bills where id=$1',[bill])).total,58000);
+assert.equal((await one("select count(*)::int n from public.audit_log where type='cancel_table'")).n,1);
+const newOrder=(await one('select public.submit_order(1,gen_random_uuid(),$1::jsonb) id',[JSON.stringify([{menu_item_id:food,qty:1},{menu_item_id:drink,qty:1}])])).id;
+const newSession=(await one('select session_id from public.orders where id=$1',[newOrder])).session_id;
+await cancel();assert.equal((await one('select count(*)::int n from public.order_items where order_id=$1 and cancelled_at is null',[newOrder])).n,2);
+const newIds=(await db.query('select id from public.order_items where order_id=$1',[newOrder])).rows.map(i=>i.id);
+await assert.rejects(cancel(newIds,cancelReq,newSession),/đã được sử dụng/);
+await user(4);await cancel(newIds,'90000000-0000-0000-0000-000000000002',newSession);
+assert.deepEqual(await one('select status,kitchen_relevant from public.orders where id=$1',[newOrder]),{status:'done',kitchen_relevant:false});
+assert.equal((await one('select count(*)::int n from public.table_cancellations')).n,2);
+assert.equal((await one('select count(*)::int n from public.bills')).n,1);
+await assert.rejects(db.exec('delete from public.table_cancellations'),/permission denied/);
+await user(2);assert.equal((await one('select count(*)::int n from public.table_cancellations')).n,0);
+await db.exec('reset role');await db.exec('set role anon');await assert.rejects(cancel(),/permission denied/);
+console.log(`PASS: upgrade ${includeOptional?'after 010':'directly after 009'}; history backfill and chain append/retry, old transfer retry, reason-free item cancellation, whole-table roles/snapshot/retry/closure, preserved paid food/invoice, new guest protection, immutable records and anonymous denial. PGlite, not concurrent sessions.`);
+}finally{await db.close();}
+
+}

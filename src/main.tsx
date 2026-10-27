@@ -13,6 +13,8 @@ import BillPanel from './BillPanel';
 import KitchenTools from './KitchenTools';
 import InvoiceHistory from './InvoiceHistory';
 import PosIcon from './PosIcon';
+import CancelTablePanel from './CancelTablePanel';
+import SwipeOrderCard from './SwipeOrderCard';
 import {CancelItem,AuditPanel} from './OperationsPanel';
 const groups=[{id:'bun',name:'Món chính'},{id:'an_them',name:'Món thêm'},{id:'do_uong',name:'Nước giải khát'}];
 const roles:Record<string,string>={chu:'Chủ quán',thu_ngan:'Thu ngân',phuc_vu:'Phục vụ',bep:'Bếp'};
@@ -22,7 +24,7 @@ type Item={id:string;name:string;price:number;category:string;is_out:boolean};
 type DiningTable={id:number;name:string};
 type Profile={name:string;role:string};
 type Pending={requestId:string;tableId:number;items:{menu_item_id:string;qty:number;note:string;expected_price?:number}[]};
-type KitchenOrder=Order&{table_sessions:{table_id:number;closed_at:string|null}};
+type KitchenOrder=Order&{table_sessions:{table_id:number;closed_at:string|null;table_path?:number[]}};
 const orderFields='id,request_id,session_id,status,kitchen_relevant,created_at,order_items(id,name,price,qty,category,note,paid,bill_no,cancelled_at,cancel_reason)';
 const storageKey=(user:string)=>`goc-pho-pending-v1:${user}`;
 function App(){
@@ -38,7 +40,7 @@ function App(){
  function navigate(next:View){setView(next);managementNav.current?.removeAttribute('open');}
  const [selected,setSelected]=useState<DiningTable|null>(null),[group,setGroup]=useState('bun');
  const [drafts,setDrafts]=useState<Record<number,Record<string,number>>>({}),[notes,setNotes]=useState<Record<number,Record<string,string>>>({});
- const [paymentPending,setPaymentPending]=useState(false),[transferPending,setTransferPending]=useState(false),[menuPending,setMenuPending]=useState(false),[billPending,setBillPending]=useState(false);
+ const [paymentPending,setPaymentPending]=useState(false),[transferPending,setTransferPending]=useState(false),[menuPending,setMenuPending]=useState(false),[billPending,setBillPending]=useState(false),[cancelTablePending,setCancelTablePending]=useState(false),[itemCancelBusy,setItemCancelBusy]=useState(false);
  const [pending,setPending]=useState<Pending|null>(null),[sending,setSending]=useState(false);
  const [sessions,setSessions]=useState<TableSession[]>([]),[cooking,setCooking]=useState<KitchenOrder[]>([]);
  const [syncError,setSyncError]=useState(''),[lastSync,setLastSync]=useState(''),[completing,setCompleting]=useState<string|null>(null);
@@ -77,8 +79,8 @@ function App(){
   const user=session.user.id;refreshLock.current=true;
   try{
    const [s,k,m]=await Promise.all([
-    supabase.from('table_sessions').select(`id,table_id,orders(${orderFields})`).is('closed_at',null),
-    supabase.from('orders').select(`${orderFields},table_sessions!inner(table_id,closed_at)`).eq('status','cooking').eq('kitchen_relevant',true).order('created_at').order('id'),
+    supabase.from('table_sessions').select(`id,table_id,table_path,orders(${orderFields})`).is('closed_at',null),
+    supabase.from('orders').select(`${orderFields},table_sessions!inner(table_id,closed_at,table_path)`).eq('status','cooking').eq('kitchen_relevant',true).order('created_at').order('id'),
     supabase.from('menu_items').select('id,name,price,category,is_out').eq('is_active',true).order('sort').order('id')
    ]);
    if(s.error||k.error||m.error)throw new Error();
@@ -97,15 +99,15 @@ function App(){
   e.preventDefault();if(!supabase)return;setBusy(true);setError('');
   try{const r=await supabase.auth.signInWithPassword({email:email.trim(),password});if(r.error)setError('Đăng nhập thất bại. Kiểm tra email, mật khẩu và kết nối.');else setPassword('');}catch{setError('Không kết nối được Supabase.');}finally{setBusy(false);}
  }
- async function logout(){if(!supabase||sending||paymentPending||transferPending||menuPending||billPending)return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
+ async function logout(){if(!supabase||sending||paymentPending||transferPending||menuPending||billPending||cancelTablePending||itemCancelBusy)return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
  const qty=selected?drafts[selected.id]??{}:{};
  const total=menu.reduce((s,m)=>s+m.price*(qty[m.id]||0),0);
  const count=Object.values(qty).reduce((a,b)=>a+b,0);
  const unavailableDraft=Object.entries(qty).some(([id,n])=>n>0&&!menu.some(m=>m.id===id&&!m.is_out));
- const locked=!!pending||sending||paymentPending||transferPending||menuPending||billPending;
+ const locked=!!pending||sending||paymentPending||transferPending||menuPending||billPending||cancelTablePending||itemCancelBusy;
  function changeQty(id:string,delta:number){if(!selected||locked)return;const table=selected.id;setDrafts(d=>({...d,[table]:{...d[table],[id]:Math.min(99,Math.max(0,(d[table]?.[id]||0)+delta))}}));}
  async function sendOrder(){
-  if(!session||!supabase||sendLock.current||paymentPending||transferPending||menuPending||billPending||!profile||profile.role==='bep')return;
+  if(!session||!supabase||sendLock.current||paymentPending||transferPending||menuPending||billPending||cancelTablePending||itemCancelBusy||!profile||profile.role==='bep')return;
   const user=session.user.id;
   let payload=pending;
   if(!payload){
@@ -133,11 +135,11 @@ function App(){
   finally{sendLock.current=false;setSending(false);}
  }
  async function complete(id:string){
-  if(!supabase||completing)return;setCompleting(id);setError('');
+  if(!supabase||completing||cancelTablePending||itemCancelBusy)return;setCompleting(id);setError('');
   try{const r=await supabase.rpc('complete_kitchen_order',{p_order_id:id});if(r.error)throw new Error(r.error.message);await refresh();}
   catch(e){setError(`Chưa hoàn thành đơn: ${e instanceof Error?e.message:'Lỗi kết nối'}. Có thể thử lại an toàn.`);}finally{setCompleting(null);}
  }
- const historyOrders=fifo(sessions.flatMap(s=>s.orders.filter(o=>o.status==='done'&&o.kitchen_relevant).map(o=>({...o,table_sessions:{table_id:s.table_id,closed_at:null}}))));
+ const historyOrders=fifo(sessions.flatMap(s=>s.orders.filter(o=>o.status==='done'&&o.kitchen_relevant).map(o=>({...o,table_sessions:{table_id:s.table_id,closed_at:null,table_path:s.table_path}}))));
  const kitchen=history?historyOrders:fifo(cooking);
  const canComplete=profile&&['bep','chu','thu_ngan'].includes(profile.role);
  const currentOrders=selected?fifo(sessions.filter(s=>s.table_id===selected.id).flatMap(s=>s.orders)):[];
@@ -157,9 +159,9 @@ function App(){
  {loading?<div className="loading-state" role="status">Đang tải…</div>:!session?<div className="login-shell"><form className="login-form" onSubmit={login}><small>BÚN RIÊU GÓC PHỐ</small><h2>Đăng nhập nhân viên</h2><p>Chào ngày mới, sẵn sàng phục vụ.</p><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Mật khẩu<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy||!supabase} type="submit">{busy?'Đang đăng nhập…':'Đăng nhập'}</button></form></div>:profile&&<>
  <div className="workspace-heading"><div><small>{view==='service'||view==='kitchen'?'BÁN HÀNG':'QUẢN LÝ'}</small><h1>{titles[view]}</h1></div><span className="workspace-subtitle">{view==='service'?`${tables.length} bàn · ${occupied} đang phục vụ`:view==='kitchen'?`${cooking.length} đơn đang làm`:'Bún Riêu Góc Phố'}</span></div>
  {syncError&&<aside className="notice error-notice" role="alert">{syncError}</aside>}
- {pending&&<aside className="notice" role="status"><strong>Đơn chờ xác nhận — Bàn {pending.tableId}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn.</p><button disabled={sending||paymentPending||transferPending||menuPending||billPending} onClick={sendOrder}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}
+ {pending&&<aside className="notice" role="status"><strong>Đơn chờ xác nhận — Bàn {pending.tableId}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn.</p><button disabled={sending||paymentPending||transferPending||menuPending||billPending||cancelTablePending||itemCancelBusy} onClick={sendOrder}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}
  {menuPending&&view!=='menu'&&<aside className="notice" role="status">Có cập nhật thực đơn đang xử lý hoặc chờ xác nhận. <button onClick={()=>navigate('menu')}>Mở quản lý thực đơn</button></aside>}
- {(transferPending||billPending||paymentPending)&&view!=='service'&&view!=='invoices'&&<aside className="notice" role="status">Có thao tác bàn hoặc thanh toán đang chờ. <button onClick={()=>navigate('service')}>Kiểm tra thao tác chờ</button></aside>}
+ {(transferPending||billPending||cancelTablePending||itemCancelBusy||paymentPending)&&view!=='service'&&view!=='invoices'&&<aside className="notice" role="status">Có thao tác bàn hoặc thanh toán đang chờ. <button onClick={()=>navigate('service')}>Kiểm tra thao tác chờ</button></aside>}
  <div hidden={view!=='service'} className="service-page"><div className="service-layout">
  <section className="service-main">
  {!selected?<><div className="tables-toolbar"><label className="search-field"><PosIcon name="search"/><input aria-label="Tìm bàn" placeholder="Tìm bàn…" value={tableSearch} onChange={e=>setTableSearch(e.target.value)}/></label><div className="table-filters" role="group" aria-label="Lọc trạng thái bàn"><button aria-pressed={tableFilter==='all'} onClick={()=>setTableFilter('all')}>Tất cả <span>{tables.length}</span></button><button aria-pressed={tableFilter==='empty'} onClick={()=>setTableFilter('empty')}>Trống <span>{tables.length-occupied}</span></button><button aria-pressed={tableFilter==='busy'} onClick={()=>setTableFilter('busy')}>Đang phục vụ <span>{occupied}</span></button></div></div>
@@ -179,17 +181,18 @@ function App(){
  </section>
  <aside className="table-order" aria-label="Đơn của bàn">
  <div className="order-panel-heading"><span className="order-panel-icon"><PosIcon name="invoice"/></span><div><h2>{selected?selected.name:'Thông tin bàn'}</h2><small>{selected?'Theo dõi đơn và thanh toán':'Chọn bàn để bắt đầu phục vụ'}</small></div></div>
- {!selected&&!transferPending&&!billPending&&!paymentPending&&<div className="table-placeholder"><PosIcon name="tables"/><h3>Chọn một bàn</h3><p>Gọi món, theo dõi đơn và thanh toán ngay tại đây.</p><dl><div><dt>Bàn trống</dt><dd>{tables.length-occupied}</dd></div><div><dt>Đang phục vụ</dt><dd>{occupied}</dd></div><div><dt>Chưa thanh toán</dt><dd>{money(unpaidTotal)}</dd></div></dl></div>}
- {selected&&<><h3 className="saved-order-title">Đơn đã lưu · {money(savedTotal(sessions,selected.id))}</h3><div className="saved-orders">{currentOrders.length?currentOrders.map(o=><article className="saved-order" key={o.id}><div><div className="order-heading"><h2>Đợt {new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</h2><span className="order-status">{o.status==='cooking'?'Đang làm':'Đã ra món'}</span></div><ul>{o.order_items.map(i=><li className={i.cancelled_at?'cancelled-line':''} key={i.id}><div className="saved-line-heading"><strong>{i.qty} × {i.name}</strong><span>{money(i.price*i.qty)}</span></div><small>Bill {i.bill_no??1}</small>{i.note&&<p className="item-note">{i.note}</p>}{canCashier?<CancelItem compact item={i} disabled={locked||!!syncError||!lastSync} onChanged={refresh}/>:i.cancelled_at&&<p>Đã hủy · {i.cancel_reason}</p>}</li>)}</ul></div></article>):<div className="empty-orders"><p>Bàn chưa có món đã lưu.</p><small>Chọn món bên trái rồi bấm Gửi bếp.</small></div>}</div></>}
- <details className="table-operations" hidden={!canCashier||(!selected&&!transferPending&&!billPending)} open={tableActionsOpen||transferPending||billPending} onToggle={e=>setTableActionsOpen(e.currentTarget.open)}><summary>Thao tác bàn<PosIcon name="chevron"/></summary>
- {canCashier&&<TransferPanel key={`transfer:${session!.user.id}`} userId={session!.user.id} table={selected} tables={tables} sessions={sessions} disabled={billPending||menuPending||paymentPending||!!pending||sending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTransferPending} onTransferred={async id=>{await refresh();setSelected(tables.find(t=>t.id===id)??null);}}/>}
+ {!selected&&!transferPending&&!billPending&&!cancelTablePending&&!paymentPending&&<div className="table-placeholder"><PosIcon name="tables"/><h3>Chọn một bàn</h3><p>Gọi món, theo dõi đơn và thanh toán ngay tại đây.</p><dl><div><dt>Bàn trống</dt><dd>{tables.length-occupied}</dd></div><div><dt>Đang phục vụ</dt><dd>{occupied}</dd></div><div><dt>Chưa thanh toán</dt><dd>{money(unpaidTotal)}</dd></div></dl></div>}
+ {selected&&<><h3 className="saved-order-title">Đơn đã lưu · {money(savedTotal(sessions,selected.id))}</h3><div className="saved-orders">{currentOrders.length?currentOrders.map(o=><article className="saved-order" key={o.id}><div><div className="order-heading"><h2>Đợt {new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</h2><span className="order-status">{o.status==='cooking'?'Đang làm':'Đã ra món'}</span></div><ul>{o.order_items.map(i=><li className={i.cancelled_at?'cancelled-line':''} key={i.id}><div className="saved-line-heading"><strong>{i.qty} × {i.name}</strong><span>{money(i.price*i.qty)}</span></div><small>Bill {i.bill_no??1}</small>{i.note&&<p className="item-note">{i.note}</p>}{canCashier?<CancelItem compact onBusy={setItemCancelBusy} item={i} disabled={locked||!!syncError||!lastSync} onChanged={refresh}/>:i.cancelled_at&&<p>Đã hủy · {i.cancel_reason}</p>}</li>)}</ul></div></article>):<div className="empty-orders"><p>Bàn chưa có món đã lưu.</p><small>Chọn món bên trái rồi bấm Gửi bếp.</small></div>}</div></>}
+ <details className="table-operations" hidden={!canCashier||(!selected&&!transferPending&&!billPending&&!cancelTablePending)} open={tableActionsOpen||transferPending||billPending||cancelTablePending} onToggle={e=>setTableActionsOpen(e.currentTarget.open)}><summary>Thao tác bàn<PosIcon name="chevron"/></summary>
+ {canCashier&&<TransferPanel key={`transfer:${session!.user.id}`} userId={session!.user.id} table={selected} tables={tables} sessions={sessions} disabled={cancelTablePending||itemCancelBusy||billPending||menuPending||paymentPending||!!pending||sending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTransferPending} onTransferred={async id=>{await refresh();setSelected(tables.find(t=>t.id===id)??null);}}/>}
  {canCashier&&<BillPanel key={`bill-move:${session!.user.id}`} userId={session!.user.id} table={selected} sessions={sessions} disabled={menuPending||paymentPending||transferPending||sending||!!pending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setBillPending} onChanged={refresh}/>}
+ {canCashier&&<CancelTablePanel key={`cancel-table:${session!.user.id}`} userId={session!.user.id} table={selected} sessions={sessions} disabled={itemCancelBusy||menuPending||paymentPending||transferPending||billPending||sending||!!pending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setCancelTablePending} onChanged={refresh} onMessage={setMessage}/>}
  </details>
- <PaymentPanel key={session!.user.id} userId={session!.user.id} table={selected} sessions={sessions} canPay={canCashier} hasDraft={billPending||menuPending||transferPending||!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh} receiptRequest={receiptRequest} onReceiptError={setError}/>
+ <PaymentPanel key={session!.user.id} userId={session!.user.id} table={selected} sessions={sessions} canPay={canCashier} hasDraft={cancelTablePending||itemCancelBusy||billPending||menuPending||transferPending||!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh} receiptRequest={receiptRequest} onReceiptError={setError}/>
  {selected&&<footer className="order-footer"><div><small>{selected.name} · {count} món chọn thêm</small><strong>{money(total)}</strong></div><div className="footer-actions"><button disabled={locked||!count} onClick={()=>{setDrafts(d=>({...d,[selected.id]:{}}));setNotes(n=>({...n,[selected.id]:{}}));}}>Xóa chọn</button><button className="primary" disabled={locked||!count||!lastSync||unavailableDraft} onClick={sendOrder}>Gửi bếp</button></div></footer>}
  </aside></div></div>
- {view==='kitchen'&&<div className="kitchen-page"><KitchenTools key={`kitchen-tools:${session!.user.id}`} orders={cooking} ready={!!lastSync} onFreshChange={setFreshKitchenIds} onShowQueue={()=>setHistory(false)}/><nav className="kitchen-tabs" aria-label="Đơn bếp"><button aria-pressed={!history} onClick={()=>setHistory(false)}>Đang làm ({cooking.length})</button><button aria-pressed={history} onClick={()=>setHistory(true)}>Lịch sử</button></nav><section className="kitchen-grid">{kitchen.map((o,index)=><article className={`kitchen-card ${!history&&index===0?'first-order':''} ${!history&&freshKitchenIds.includes(o.id)?'new-kitchen-order':''}`} key={o.id}><div className="order-heading"><h2>Bàn {o.table_sessions.table_id}</h2><span>{new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · {Math.max(0,Math.floor((Date.now()-Date.parse(o.created_at))/60000))} phút</span></div><small>Đơn {o.id.slice(0,8)}{!history&&freshKitchenIds.includes(o.id)&&<strong className="new-order-badge">Mới</strong>}</small><ul>{kitchenLines(o).map(i=><li key={i.id}><strong>{i.qty} × {i.name}</strong>{i.note&&<p className="item-note">{i.note}</p>}</li>)}</ul>{!history&&canComplete&&<button className="primary" disabled={!!completing} onClick={()=>void complete(o.id)}>{completing===o.id?'Đang lưu…':'Xong'}</button>}</article>)}{!kitchen.length&&<div className="empty-state"><h3>{history?'Chưa có đơn đã xong của các bàn đang mở.':'Chưa có món đang làm.'}</h3></div>}</section></div>}
- {profile.role==='chu'&&<div className="management-page" hidden={view!=='menu'}><MenuPanel key={`menu:${session!.user.id}`} active={view==='menu'} userId={session!.user.id} disabled={billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setMenuPending} onSaved={refresh}/></div>}
+ {view==='kitchen'&&<div className="kitchen-page"><KitchenTools key={`kitchen-tools:${session!.user.id}`} orders={cooking} ready={!!lastSync} onFreshChange={setFreshKitchenIds} onShowQueue={()=>setHistory(false)}/><nav className="kitchen-tabs" aria-label="Đơn bếp"><button aria-pressed={!history} onClick={()=>setHistory(false)}>Đang làm ({cooking.length})</button><button aria-pressed={history} onClick={()=>setHistory(true)}>Lịch sử</button></nav><p className="swipe-help">Vuốt đơn sang trái hoặc phải để hoàn thành.</p><section className="kitchen-grid">{kitchen.map((o,index)=><SwipeOrderCard disabled={!!history||!canComplete||!!completing||cancelTablePending||itemCancelBusy||!!syncError} onComplete={()=>complete(o.id)} className={`kitchen-card ${!history&&index===0?'first-order':''} ${!history&&freshKitchenIds.includes(o.id)?'new-kitchen-order':''}`} key={o.id}><div className="order-heading"><h2 className="kitchen-table-path">{(o.table_sessions.table_path?.length?o.table_sessions.table_path:[o.table_sessions.table_id]).map(id=>`Bàn ${id}`).join(' → ')}</h2><span>{new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · {Math.max(0,Math.floor((Date.now()-Date.parse(o.created_at))/60000))} phút</span></div><small>Đơn {o.id.slice(0,8)}{!history&&freshKitchenIds.includes(o.id)&&<strong className="new-order-badge">Mới</strong>}</small><ul>{kitchenLines(o).map(i=><li key={i.id}><strong>{i.qty} × {i.name}</strong>{i.note&&<p className="item-note">{i.note}</p>}</li>)}</ul>{!history&&canComplete&&<button className="primary" disabled={!!completing||cancelTablePending||itemCancelBusy||!!syncError} onClick={()=>void complete(o.id)}>{completing===o.id?'Đang lưu…':'Xong'}</button>}</SwipeOrderCard>)}{!kitchen.length&&<div className="empty-state"><h3>{history?'Chưa có đơn đã xong của các bàn đang mở.':'Chưa có món đang làm.'}</h3></div>}</section></div>}
+ {profile.role==='chu'&&<div className="management-page" hidden={view!=='menu'}><MenuPanel key={`menu:${session!.user.id}`} active={view==='menu'} userId={session!.user.id} disabled={cancelTablePending||itemCancelBusy||billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setMenuPending} onSaved={refresh}/></div>}
  {canCashier&&<><div className="management-page" hidden={view!=='revenue'}><RevenuePanel key={`revenue:${session!.user.id}`} active={view==='revenue'}/></div><div className="management-page" hidden={view!=='audit'}><AuditPanel active={view==='audit'}/></div><div className="management-page" hidden={view!=='invoices'}><InvoiceHistory active={view==='invoices'} disabled={paymentPending} onOpen={id=>{setError('');setReceiptRequest(r=>({id,key:(r?.key??0)+1}));}}/></div></>}
  </>}
  </main></div>;
