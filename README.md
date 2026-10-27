@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có hủy một phần số lượng, tách/gộp bàn, mang về, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
+Chưa có hủy một phần số lượng, tách/gộp bàn, mang về, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán hết các bill sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -119,3 +119,13 @@ Món gọi thêm mặc định vào bill chưa trả có số nhỏ nhất; có 
 RPC khóa bàn/phiên/dòng món, xác thực tất cả dòng cùng nguồn và cùng phiên, lưu request_id và ghi nhật ký trong cùng giao dịch. Không được ghi trực tiếp bảng bill_moves từ client. Trước khi gửi, app lưu mã tách/gộp trong localStorage theo tài khoản; mất phản hồi hoặc reload thì dùng Thử lại cùng mã tách/gộp. Không xóa bộ nhớ trình duyệt khi còn yêu cầu chờ. Mã thanh toán cũng giữ số bill đã chọn qua reload; dữ liệu thanh toán chờ từ bản cũ vẫn mặc định Bill 1. Nếu món/bill bị thay đổi ở thiết bị khác, server từ chối yêu cầu mới và app yêu cầu chọn lại.
 
 `npm run test:bills` kiểm tra PGlite: quyền, dữ liệu sai, tách/gộp lặp, giữ món/bếp, từ chối snapshot thanh toán cũ, thu riêng và giảm giá, giữ bàn mở, gọi thêm vào bill chưa trả, món đã trả/hủy, bill đích và thử lại sau khi đóng bàn. `npm run test:bills-ui` kiểm tra Chromium với Supabase giả lập: lựa chọn, tách/gộp, reload/thử lại, thanh toán Bill 2 giữ đúng mã/số bill, số dư bàn, nhật ký và mobile. Chưa kiểm chứng Supabase thật hoặc nhiều phiên PostgreSQL đồng thời.
+
+## Chuông đơn mới và giữ sáng màn hình Bếp
+
+Không cần migration SQL mới. Mở Bếp → Bật chuông đơn mới để nghe âm thử. Kiểm tra âm lượng thiết bị; nút Thử chuông phát lại âm mẫu, Tắt chuông đơn mới chỉ tắt âm, thông báo trực quan vẫn hoạt động. Sau khi reload hoặc rời Bếp rồi mở lại cần bật chuông lại. Đơn cũ ở lần đồng bộ đầu không báo lại; đơn mới nhận sau đó có nhãn Mới, viền và thông báo số đơn chưa xem. Xem đơn đang làm đưa về hàng chờ từ lịch sử. Đánh dấu đã xem chỉ xóa thông báo, không đổi trạng thái đơn; dùng Xong để hoàn thành món. Đơn đã hoàn thành hoặc hủy hết món sẽ rời danh sách mới. Chuyển bàn hoặc đồng bộ lại cùng id đơn không phát chuông lần nữa.
+
+Bấm Giữ màn hình bếp sáng để yêu cầu Screen Wake Lock. App hiển thị trạng thái thực tế: đang giữ sáng, tạm dừng, bị hệ thống thả hoặc yêu cầu thất bại. Tắt giữ sáng hoặc rời Bếp sẽ thả yêu cầu. Khi trang bị ẩn, app thả giữ sáng; khi quay lại và tùy chọn vẫn bật, app yêu cầu lại. Nếu hệ thống thả khi trang đang mở hoặc từ chối vì pin/quyền thiết bị, dùng Thử giữ sáng lại. Thiết bị không hỗ trợ sẽ hiện thông báo và khóa nút.
+
+Cần HTTPS hoặc localhost, trình duyệt có Web Audio/Screen Wake Lock tương ứng. Chức năng không cài ứng dụng, không yêu cầu quyền thông báo và không gửi push. Giữ trang Bếp mở để nhận polling mỗi 5 giây; chuyển app/khóa máy có thể làm chậm đồng bộ và không bảo đảm chuông nền. Âm chỉ phát cho đơn mới nhận khi trang đang hiển thị. Thông báo Mới và các tùy chọn chỉ ở phiên trang hiện tại, không đồng bộ trạng thái đã xem giữa thiết bị.
+
+`npm run test:kitchen-tools` dùng Chromium với Supabase và API thiết bị giả lập: không báo đơn cũ, phát/tắt chuông, chống báo lặp khi đổi bàn, đánh dấu đã xem, điều hướng từ lịch sử, giữ sáng/thử lại/ẩn-hiện, thả yêu cầu khi rời Bếp (kể cả phản hồi đến muộn), đóng audio và thiết bị không hỗ trợ. Cần kiểm tra âm lượng và khả năng giữ sáng thực tế trên điện thoại/tablet của quán.
