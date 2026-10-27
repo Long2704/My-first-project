@@ -46,3 +46,11 @@ Thêm VITE_SUPABASE_URL và VITE_SUPABASE_PUBLISHABLE_KEY trong cấu hình dự
 Cần Chromium (`CHROMIUM_PATH` nếu không ở /usr/bin/chromium). Chạy `npm run dev` trong một terminal, rồi `npm run test:browser` trong terminal khác. Test dùng Supabase giả lập hoàn toàn, không tạo đơn thật: đăng nhập, 12 bàn, chọn món/ghi chú, tổng 61.000đ, mất phản hồi sau khi server nhận đơn, khôi phục sau reload và gửi lại cùng mã, bếp lọc nước, hoàn thành và lịch sử, chiều ngang mobile.
 
 Chưa thay thế việc kiểm thử RPC/RLS trên Supabase thật bằng tài khoản từng vai trò. Kiểm tra thực tế: điện thoại gửi món có ghi chú, tablet nhận trong khoảng 5 giây, hoàn thành từ bếp và kiểm tra trạng thái bàn; tải lại trang để xác nhận đơn đã lưu. Kiểm tra riêng đơn chỉ có nước không vào bếp. Phục vụ phải bị server từ chối hoàn thành đơn; tài khoản bếp phải bị từ chối gửi đơn.
+
+## Chuẩn bị thanh toán
+
+Sau migration 003, chạy `supabase/migrations/004_payments.sql` một lần trong Supabase SQL Editor. Tạo bills, bill_items, bill_orders và audit_log; thêm liên kết hóa đơn vào order_items. Chưa có giao diện thanh toán trong bản này.
+
+RPC pay_bill chỉ cho thu ngân/chủ. Giá lấy từ order_items đã lưu; kiểm tra đúng phiên bàn và danh sách món trước khi thu tiền. Khóa bàn cùng thứ tự với gửi đơn, bảo vệ bằng request_id và chụp hóa đơn trong một giao dịch; đóng phiên khi không còn món chưa trả. Không xóa hoặc đánh dấu xong đơn bếp khi thanh toán.
+
+`npm run test:sql` kiểm thử các migration trên PostgreSQL-compatible PGlite cục bộ, không kết nối Supabase: quyền vai trò, RLS, từ chối ghi trực tiếp hóa đơn, gửi lại đơn/thanh toán, tiền thiếu, danh sách món thay đổi, giảm giá, tiền thối, chuyển khoản, snapshot giá, phiên bàn cũ và đơn đã trả nhưng chưa làm xong. Chưa kiểm thử nhiều phiên database đồng thời hay thanh toán trên Supabase thật.
