@@ -49,9 +49,8 @@ await context.addInitScript(()=>{
   createOscillator(){return {frequency:{value:0},connect(){},disconnect(){},start(){window.deviceCalls.notes++;},stop(){},onended:null};}
   createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
  }
- class Lease extends EventTarget{released=false;async release(){if(!this.released){this.released=true;window.deviceCalls.releases++;this.dispatchEvent(new Event('release'));}}}
  Object.defineProperty(window,'AudioContext',{value:TestAudio,configurable:true});
- Object.defineProperty(navigator,'wakeLock',{configurable:true,value:{async request(type){if(type!=='screen')throw new Error();window.deviceCalls.wakeRequests++;if(window.rejectWake)throw new Error('battery');const lease=new Lease();window.leases.push(lease);if(window.holdWake)await new Promise(resolve=>{window.resolveWake=resolve;});return lease;}}});
+ Object.defineProperty(navigator,'wakeLock',{configurable:true,value:{async request(){window.deviceCalls.wakeRequests++;throw new Error('Must not request wake lock');}}});
  let visibility='visible';Object.defineProperty(document,'visibilityState',{get:()=>visibility,configurable:true});window.setTestVisibility=v=>{visibility=v;document.dispatchEvent(new Event('visibilitychange'));};
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -68,16 +67,11 @@ await page.getByRole('button',{name:'Đánh dấu đã xem',exact:true}).click()
 await page.getByRole('button',{name:'Tắt chuông đơn mới',exact:true}).click();sessions[0].orders.push(order(4,5));await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.getByText('Có 1 đơn bếp mới chưa xem',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.deviceCalls.notes),4);
 // Hoàn thành/hủy hết đơn sẽ xóa đánh dấu mới khỏi danh sách.
 sessions[0].orders[2].status='done';await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.new-kitchen-alert'));
-await page.evaluate(()=>window.rejectWake=true);await page.getByRole('button',{name:'Giữ màn hình bếp sáng',exact:true}).click();await page.getByText('Chưa giữ sáng được.',{exact:false}).waitFor();
-await page.evaluate(()=>window.rejectWake=false);await page.getByRole('button',{name:'Thử giữ sáng lại',exact:true}).click();await page.getByText('Đang giữ màn hình bếp sáng.',{exact:true}).waitFor();
-await page.evaluate(()=>window.setTestVisibility('hidden'));await page.getByText('Tạm dừng giữ sáng khi trang không hiển thị.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.leases.at(-1).released),true);
-await page.evaluate(()=>window.setTestVisibility('visible'));await page.getByText('Đang giữ màn hình bếp sáng.',{exact:true}).waitFor();
-await page.evaluate(()=>window.leases.at(-1).release());await page.getByText('Hệ thống đã ngừng giữ sáng.',{exact:false}).waitFor();await page.getByRole('button',{name:'Thử giữ sáng lại',exact:true}).click();await page.getByText('Đang giữ màn hình bếp sáng.',{exact:true}).waitFor();
-await page.getByRole('button',{name:'Tắt giữ sáng',exact:true}).click();await page.getByText('Giữ sáng đang tắt.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.leases.at(-1).released),true);
-// Yêu cầu giữ sáng trả về muộn sau khi rời Bếp phải được thả.
-await page.evaluate(()=>window.holdWake=true);await page.getByRole('button',{name:'Giữ màn hình bếp sáng',exact:true}).click();await page.waitForFunction(()=>typeof window.resolveWake==='function');await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.evaluate(()=>window.resolveWake());await page.waitForFunction(()=>window.leases.at(-1).released);assert.equal(await page.evaluate(()=>window.deviceCalls.closes),1);
+assert.equal(await page.getByRole('button',{name:'Giữ màn hình bếp sáng',exact:true}).count(),0);
+await page.evaluate(()=>window.setTestVisibility('hidden'));await page.evaluate(()=>window.setTestVisibility('visible'));
+await page.getByRole('button',{name:'Phục vụ',exact:true}).click();assert.equal(await page.evaluate(()=>window.deviceCalls.closes),1);assert.equal(await page.evaluate(()=>window.deviceCalls.wakeRequests),0);
 await page.getByRole('button',{name:/^Bếp \(/}).click();await page.getByRole('button',{name:'Bật chuông đơn mới',exact:true}).waitFor();assert.equal(await page.locator('.new-order-badge').count(),0);
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-await page.evaluate(()=>localStorage.setItem('test-unsupported','true'));await page.reload();await page.getByRole('button',{name:/^Bếp \(/}).click();assert.equal(await page.getByRole('button',{name:'Bật chuông đơn mới',exact:true}).isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Giữ màn hình bếp sáng',exact:true}).isDisabled(),true);
-assert.deepEqual(errors,[]);console.log('PASS: no backlog alarm, enabled/muted new-order chimes, deduplication and table transfer, highlight/acknowledgment, history navigation, wake rejection/retry/release/visibility, late request cleanup, audio cleanup, unsupported devices and mobile. Device APIs and Supabase mocked.');
+await page.evaluate(()=>localStorage.setItem('test-unsupported','true'));await page.reload();await page.getByRole('button',{name:/^Bếp \(/}).click();assert.equal(await page.getByRole('button',{name:'Bật chuông đơn mới',exact:true}).isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Giữ màn hình bếp sáng',exact:true}).count(),0);
+assert.deepEqual(errors,[]);console.log('PASS: no backlog alarm, enabled/muted new-order chimes, deduplication and table transfer, highlight/acknowledgment, history navigation, no wake lock controls or requests, audio cleanup, unsupported devices and mobile. Device APIs and Supabase mocked.');
 }finally{await browser.close();}
