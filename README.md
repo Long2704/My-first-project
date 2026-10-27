@@ -127,3 +127,11 @@ Không cần migration SQL mới. Mở Bếp → Bật chuông đơn mới để
 Cần trình duyệt hỗ trợ Web Audio. Chức năng không cài ứng dụng, không yêu cầu quyền thông báo và không gửi push. Giữ trang Bếp mở để nhận polling mỗi 5 giây; chuyển app/khóa máy có thể làm chậm đồng bộ và không bảo đảm chuông nền. Âm chỉ phát cho đơn mới nhận khi trang đang hiển thị. Thông báo Mới và các tùy chọn chỉ ở phiên trang hiện tại, không đồng bộ trạng thái đã xem giữa thiết bị.
 
 `npm run test:kitchen-tools` dùng Chromium với Supabase và API thiết bị giả lập: không báo đơn cũ, phát/tắt chuông, chống báo lặp khi đổi bàn, đánh dấu đã xem, điều hướng từ lịch sử, không có nút hoặc yêu cầu giữ sáng, đóng audio và thiết bị không hỗ trợ. Cần kiểm tra âm lượng thực tế trên điện thoại/tablet của quán.
+
+## Bố cục POS gọn
+
+Màn hình Phục vụ tập trung vào sơ đồ bàn, tìm bàn và lọc Trống/Đang phục vụ. Chọn bàn mở thực đơn bên trái và đơn/thu ngân bên phải trên máy tính; trên điện thoại giỏ gửi bếp nằm cố định ở cuối màn hình. Có tìm món, nhãn trạng thái bàn và tổng chưa thanh toán. Chuyển bàn và tách/gộp bill nằm dưới Thao tác bàn khi chọn bàn.
+
+Menu Quản lý trên thanh điều hướng mở các màn hình riêng: Quản lý thực đơn (chủ quán), Báo cáo doanh thu, Nhật ký hoạt động và Hóa đơn gần đây (chủ/thu ngân). Không còn xếp các bảng quản lý lên màn hình Phục vụ. Hóa đơn được mở bằng hộp thoại chung để xem/in lại từ màn hình hóa đơn. Các yêu cầu chờ vẫn giữ nguyên khi chuyển màn hình; thông báo dẫn về nơi xử lý nếu có cập nhật menu hoặc thao tác bàn chưa xác nhận. Giỏ món chưa gửi được giữ khi đổi màn hình trong cùng phiên trang.
+
+Không có migration SQL cho bố cục này. `npm run test:layout` kiểm tra dashboard, bộ lọc/tìm bàn, thao tác theo ngữ cảnh, đổi màn hình giữ giỏ, xem/in hóa đơn, khôi phục thanh toán chờ và kích thước desktop/mobile bằng Chromium/Supabase giả lập. Các bài kiểm thử luồng đã chuyển sang menu Quản lý và Thao tác bàn tương ứng.

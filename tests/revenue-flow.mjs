@@ -44,8 +44,11 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  await route.fulfill({status:200,json:body});
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
-await page.getByRole('button',{name:'Báo cáo doanh thu',exact:true}).click();
+await management('Báo cáo doanh thu');
 await page.getByLabel('Từ ngày',{exact:true}).fill('2026-10-27');await page.getByLabel('Đến ngày',{exact:true}).fill('2026-10-27');
 const load=page.getByRole('button',{name:'Xem báo cáo',exact:true});await load.click();
 await page.getByText('210.000đ',{exact:true}).first().waitFor();assert.equal(reportCalls.length,1);assert.equal(reportCalls[0].p_from,'2026-10-27');

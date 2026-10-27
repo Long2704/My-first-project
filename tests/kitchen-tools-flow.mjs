@@ -54,6 +54,9 @@ await context.addInitScript(()=>{
  let visibility='visible';Object.defineProperty(document,'visibilityState',{get:()=>visibility,configurable:true});window.setTestVisibility=v=>{visibility=v;document.dispatchEvent(new Event('visibilitychange'));};
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bếp \(/}).click();await page.getByRole('heading',{name:'Bàn 1',exact:true}).waitFor();
 assert.equal(await page.locator('.new-order-badge').count(),0);assert.equal(await page.evaluate(()=>window.deviceCalls.notes),0);

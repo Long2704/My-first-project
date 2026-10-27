@@ -34,6 +34,9 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  await route.fulfill({status:200,json:body});
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');
 await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password-for-mock-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();
@@ -55,7 +58,7 @@ await confirm.click();
 await page.getByText('Đã hủy · Khách đổi ý',{exact:true}).waitFor();
 assert.equal(cancelAttempts.length,2);assert.equal(cancelAttempts[0].p_item_id,cancelAttempts[1].p_item_id);
 assert.match(await page.getByRole('heading',{name:/Đơn đã lưu/}).innerText(),/3\.000đ/);
-await page.getByRole('button',{name:'Nhật ký hoạt động',exact:true}).click();
+await management('Nhật ký hoạt động');
 await page.getByText('Lý do: Khách đổi ý',{exact:false}).waitFor();
 await page.getByLabel('Loại hoạt động',{exact:true}).selectOption('cancel_item');
 assert.equal(audit.length,1);

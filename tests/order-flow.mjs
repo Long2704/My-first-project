@@ -25,6 +25,9 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  await route.fulfill({status:200,json:body});
 });
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+
+async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 await page.goto('http://localhost:5173');
 await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password-for-mock-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();
