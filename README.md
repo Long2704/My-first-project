@@ -1,8 +1,8 @@
 # Bún Riêu Góc Phố POS
 
-React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn.
+React + TypeScript + Vite + Supabase. Hiện có đăng nhập, hồ sơ vai trò, 12 bàn, menu từ database, ghi chú món, gửi/lưu đơn, tổng tiền từng bàn, bếp theo FIFO và hoàn thành đơn, thanh toán và hóa đơn in được.
 
-Chưa có thanh toán, hủy món, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, báo cáo, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Chưa có quy trình đóng phiên bàn.
+Chưa có hủy món, chuyển/tách/gộp bàn hoặc bill, mang về, quản lý menu trong app, báo cáo, chuông, Wake Lock, quẹt đơn và PWA. Dùng đơn thử trước khi vận hành thực tế. Thanh toán toàn bộ Bill 1 sẽ đóng phiên bàn; đơn bếp chưa xong vẫn ở hàng chờ.
 
 ## Chạy phát triển
 
@@ -49,8 +49,21 @@ Chưa thay thế việc kiểm thử RPC/RLS trên Supabase thật bằng tài k
 
 ## Chuẩn bị thanh toán
 
-Sau migration 003, chạy `supabase/migrations/004_payments.sql` một lần trong Supabase SQL Editor. Tạo bills, bill_items, bill_orders và audit_log; thêm liên kết hóa đơn vào order_items. Chưa có giao diện thanh toán trong bản này.
+Sau migration 003, chạy `supabase/migrations/004_payments.sql` một lần trong Supabase SQL Editor. Tạo bills, bill_items, bill_orders và audit_log; thêm liên kết hóa đơn vào order_items. Giao diện thanh toán chỉ hiện cho thu ngân/chủ sau khi chọn bàn có món đã lưu.
 
 RPC pay_bill chỉ cho thu ngân/chủ. Giá lấy từ order_items đã lưu; kiểm tra đúng phiên bàn và danh sách món trước khi thu tiền. Khóa bàn cùng thứ tự với gửi đơn, bảo vệ bằng request_id và chụp hóa đơn trong một giao dịch; đóng phiên khi không còn món chưa trả. Không xóa hoặc đánh dấu xong đơn bếp khi thanh toán.
 
 `npm run test:sql` kiểm thử các migration trên PostgreSQL-compatible PGlite cục bộ, không kết nối Supabase: quyền vai trò, RLS, từ chối ghi trực tiếp hóa đơn, gửi lại đơn/thanh toán, tiền thiếu, danh sách món thay đổi, giảm giá, tiền thối, chuyển khoản, snapshot giá, phiên bàn cũ và đơn đã trả nhưng chưa làm xong. Chưa kiểm thử nhiều phiên database đồng thời hay thanh toán trên Supabase thật.
+
+
+## Thanh toán trên giao diện
+
+Chạy migration 004 trước khi dùng. Chọn bàn → Thanh toán Bàn N. Gửi hoặc xóa các món đang chọn trước khi thanh toán. Hiện hỗ trợ thanh toán toàn bộ Bill 1; chưa có giao diện tách/gộp bill.
+
+Giảm giá: nhập `10%` hoặc `10000`, nhập `0` để bỏ; chỉ hỗ trợ số nguyên, không dấu phân cách hàng nghìn. Chọn tiền mặt hoặc chuyển khoản. Tiền mặt: để trống tiền khách đưa để mặc định bằng số phải thu, hoặc nhập `100000`; app hiển thị tiền thối. Chuyển khoản: thu ngân phải kiểm tra giao dịch ngân hàng trước khi xác nhận; app không tự xác minh chuyển khoản.
+
+Trước khi gửi, app lưu mã thanh toán cùng danh sách món và thông tin xác nhận trong localStorage theo tài khoản. Chưa rõ kết quả thì dùng Thử lại cùng mã, không thu lại tiền hoặc xóa dữ liệu trình duyệt. Nếu server xác nhận đã trả nhưng tải hóa đơn lỗi, nút thử lại chỉ tải hóa đơn. Một số lỗi xác định danh sách món/phiên đã đổi sẽ bỏ yêu cầu bị từ chối và yêu cầu kiểm tra lại; server không tự thu tiền cho lượt khách mới.
+
+Hóa đơn lấy từ snapshot trong database, không tính lại theo menu hiện tại. Có tiền khách đưa và tiền thối nếu trả tiền mặt. In hóa đơn dùng window.print với CSS chỉ in nội dung hóa đơn; chưa tích hợp máy in nhiệt tự động. Nút Hóa đơn gần đây tải 30 hóa đơn mới nhất và mở/in lại. Mốc giờ hóa đơn hiển thị theo Asia/Ho_Chi_Minh.
+
+`npm run test:payments` (cần dev server và Chromium như test:browser) kiểm thử giao diện bằng Supabase giả lập: tiền thiếu, giảm phần trăm/số tiền, tiền thối, giữ mã khi mất phản hồi/reload, chỉ tải lại hóa đơn sau thanh toán, chuyển khoản, từ chối snapshot cũ, bàn trống và giữ đơn bếp, mở lại hóa đơn, CSS in và ẩn thanh toán với phục vụ. Không tạo thanh toán thật trên Supabase và chưa kiểm chứng bản in vật lý.

@@ -5,6 +5,7 @@ import {supabase} from './supabase';
 import {fifo, kitchenLines, savedTotal, tableStatus} from './order-model';
 import type {Order, TableSession} from './order-model';
 import './style.css';
+import PaymentPanel from './PaymentPanel';
 const groups=[{id:'bun',name:'Món chính'},{id:'an_them',name:'Món thêm'},{id:'do_uong',name:'Nước giải khát'}];
 const roles:Record<string,string>={chu:'Chủ quán',thu_ngan:'Thu ngân',phuc_vu:'Phục vụ',bep:'Bếp'};
 const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
@@ -13,7 +14,7 @@ type DiningTable={id:number;name:string};
 type Profile={name:string;role:string};
 type Pending={requestId:string;tableId:number;items:{menu_item_id:string;qty:number;note:string}[]};
 type KitchenOrder=Order&{table_sessions:{table_id:number;closed_at:string|null}};
-const orderFields='id,request_id,session_id,status,kitchen_relevant,created_at,order_items(id,name,price,qty,category,note,paid)';
+const orderFields='id,request_id,session_id,status,kitchen_relevant,created_at,order_items(id,name,price,qty,category,note,paid,bill_no)';
 const storageKey=(user:string)=>`goc-pho-pending-v1:${user}`;
 function App(){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true);
@@ -23,6 +24,7 @@ function App(){
  const [view,setView]=useState<'service'|'kitchen'>('service'),[history,setHistory]=useState(false);
  const [selected,setSelected]=useState<DiningTable|null>(null),[group,setGroup]=useState('bun');
  const [drafts,setDrafts]=useState<Record<number,Record<string,number>>>({}),[notes,setNotes]=useState<Record<number,Record<string,string>>>({});
+ const [paymentPending,setPaymentPending]=useState(false);
  const [pending,setPending]=useState<Pending|null>(null),[sending,setSending]=useState(false);
  const [sessions,setSessions]=useState<TableSession[]>([]),[cooking,setCooking]=useState<KitchenOrder[]>([]);
  const [syncError,setSyncError]=useState(''),[lastSync,setLastSync]=useState(''),[completing,setCompleting]=useState<string|null>(null);
@@ -77,14 +79,14 @@ function App(){
   e.preventDefault();if(!supabase)return;setBusy(true);setError('');
   try{const r=await supabase.auth.signInWithPassword({email:email.trim(),password});if(r.error)setError('Đăng nhập thất bại. Kiểm tra email, mật khẩu và kết nối.');else setPassword('');}catch{setError('Không kết nối được Supabase.');}finally{setBusy(false);}
  }
- async function logout(){if(!supabase||sending)return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
+ async function logout(){if(!supabase||sending||paymentPending)return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
  const qty=selected?drafts[selected.id]??{}:{};
  const total=menu.reduce((s,m)=>s+m.price*(qty[m.id]||0),0);
  const count=Object.values(qty).reduce((a,b)=>a+b,0);
- const locked=!!pending||sending;
+ const locked=!!pending||sending||paymentPending;
  function changeQty(id:string,delta:number){if(!selected||locked)return;const table=selected.id;setDrafts(d=>({...d,[table]:{...d[table],[id]:Math.min(99,Math.max(0,(d[table]?.[id]||0)+delta))}}));}
  async function sendOrder(){
-  if(!session||!supabase||sendLock.current||!profile||profile.role==='bep')return;
+  if(!session||!supabase||sendLock.current||paymentPending||!profile||profile.role==='bep')return;
   const user=session.user.id;
   let payload=pending;
   if(!payload){
@@ -114,14 +116,15 @@ function App(){
  const kitchen=history?historyOrders:fifo(cooking);
  const canComplete=profile&&['bep','chu','thu_ngan'].includes(profile.role);
  const currentOrders=selected?fifo(sessions.filter(s=>s.table_id===selected.id).flatMap(s=>s.orders)):[];
- return <><header><small>ỨNG DỤNG NỘI BỘ CỦA QUÁN</small><h1>Bún Riêu Góc Phố</h1><p>Nóng hổi từng tô, đậm đà vị cua.</p>{session&&<div className="account"><span>{profile?`${profile.name} · ${roles[profile.role]}`:'Tài khoản nhân viên'}</span><button disabled={busy||sending} onClick={logout}>Đăng xuất</button></div>}</header><main>
+ return <><header><small>ỨNG DỤNG NỘI BỘ CỦA QUÁN</small><h1>Bún Riêu Góc Phố</h1><p>Nóng hổi từng tô, đậm đà vị cua.</p>{session&&<div className="account"><span>{profile?`${profile.name} · ${roles[profile.role]}`:'Tài khoản nhân viên'}</span><button disabled={busy||sending||paymentPending} onClick={logout}>Đăng xuất</button></div>}</header><main>
  {error&&<aside role="alert">{error}{!profile&&session&&<p><button onClick={()=>setReload(n=>n+1)}>Thử tải lại</button></p>}</aside>}
  {message&&<aside role="status">{message}</aside>}
  {loading?<p role="status">Đang tải…</p>:!session?<form onSubmit={login}><h2>Đăng nhập nhân viên</h2><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Mật khẩu<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy||!supabase} type="submit">{busy?'Đang đăng nhập…':'Đăng nhập'}</button></form>:profile&&<>
  <nav aria-label="Chức năng">{profile.role!=='bep'&&<button aria-pressed={view==='service'} onClick={()=>setView('service')}>Phục vụ</button>}<button aria-pressed={view==='kitchen'} onClick={()=>setView('kitchen')}>Bếp ({cooking.length})</button><button onClick={()=>void refresh()}>Đồng bộ</button></nav>
  <p className="sync-status" role="status">{syncError|| (lastSync?`Đã đồng bộ ${lastSync} · cập nhật mỗi 5 giây`:'Đang tải đơn hàng…')}</p>
- <aside><strong>Bản thử nghiệm gọi món</strong><p>Đơn đã gửi được lưu tại quán. Chưa có hủy món hoặc thanh toán; hãy dùng đơn thử trước khi vận hành.</p></aside>
- {pending&&<aside role="status"><strong>Đơn chờ xác nhận — Bàn {pending.tableId}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn. Chưa hỗ trợ tự gửi khi có mạng.</p><button disabled={sending} onClick={sendOrder}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}
+ <aside><strong>Bản thử nghiệm POS</strong><p>Đã hỗ trợ gọi món và thanh toán. Chưa có hủy món hoặc tách/gộp bill; hãy kiểm tra bằng đơn thử trước khi vận hành.</p></aside>
+ {pending&&<aside role="status"><strong>Đơn chờ xác nhận — Bàn {pending.tableId}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn. Chưa hỗ trợ tự gửi khi có mạng.</p><button disabled={sending||paymentPending} onClick={sendOrder}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}
+ <PaymentPanel key={session!.user.id} userId={session!.user.id} table={view==='service'?selected:null} sessions={sessions} canPay={['chu','thu_ngan'].includes(profile.role)} hasDraft={!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh}/>
  {view==='kitchen'?<><nav aria-label="Đơn bếp"><button aria-pressed={!history} onClick={()=>setHistory(false)}>Đang làm ({cooking.length})</button><button aria-pressed={history} onClick={()=>setHistory(true)}>Lịch sử</button></nav><section>{kitchen.map((o,index)=><article className={`kitchen-card ${!history&&index===0?'first-order':''}`} key={o.id}><div className="order-heading"><h2>Bàn {o.table_sessions.table_id}</h2><span>{new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · {Math.max(0,Math.floor((Date.now()-Date.parse(o.created_at))/60000))} phút</span></div><small>Đơn {o.id.slice(0,8)}</small><ul>{kitchenLines(o).map(i=><li key={i.id}><strong>{i.qty} × {i.name}</strong>{i.note&&<p className="item-note">{i.note}</p>}</li>)}</ul>{!history&&canComplete&&<button className="primary" disabled={!!completing} onClick={()=>void complete(o.id)}>{completing===o.id?'Đang lưu…':'Xong'}</button>}</article>)}{!kitchen.length&&<p>{history?'Chưa có đơn đã xong của các bàn đang mở.':'Chưa có món đang làm.'}</p>}</section></>:!selected?<><h2 className="section-title">Chọn bàn</h2><div className="table-grid">{tables.map(t=>{
  const d=drafts[t.id]??{};const draftTotal=menu.reduce((sum,i)=>sum+i.price*(d[i.id]||0),0);
  const known=pending?.tableId===t.id&&sessions.some(s=>s.orders.some(o=>o.request_id===pending.requestId));
@@ -135,6 +138,6 @@ function App(){
  <fieldset disabled={locked}><legend className="visually-hidden">Chọn món mới</legend><section>{menu.filter(m=>m.category===group&&!m.is_out).map(m=><article className="menu-card" key={m.id}><div className="menu-row"><div><h2>{m.name}</h2><strong>{money(m.price)}</strong></div><div className="counter"><button aria-label={'Bớt '+m.name} disabled={locked||!qty[m.id]} onClick={()=>changeQty(m.id,-1)}>−</button><output>{qty[m.id]||0}</output><button aria-label={'Thêm '+m.name} disabled={locked||(qty[m.id]||0)>=99} onClick={()=>changeQty(m.id,1)}>+</button></div></div>{!!qty[m.id]&&<label>Ghi chú món<input maxLength={500} placeholder="Ví dụ: ít bún, không hành" value={notes[selected.id]?.[m.id]??''} onChange={e=>{const value=e.target.value;setNotes(n=>({...n,[selected.id]:{...n[selected.id],[m.id]:value}}));}}/></label>}</article>)}</section></fieldset>
  </>}
  </>}
- </main>{profile&&!loading&&selected&&view==='service'&&<footer><div><small>{selected.name} · {count} món chọn thêm</small><strong>{money(total)}</strong></div><div className="footer-actions"><button disabled={locked||!count} onClick={()=>{setDrafts(d=>({...d,[selected.id]:{}}));setNotes(n=>({...n,[selected.id]:{}}));}}>Xóa chọn</button><button className="primary" disabled={sending||!!pending||!count||!lastSync} onClick={sendOrder}>Gửi bếp</button></div></footer>}</>;
+ </main>{profile&&!loading&&selected&&view==='service'&&<footer><div><small>{selected.name} · {count} món chọn thêm</small><strong>{money(total)}</strong></div><div className="footer-actions"><button disabled={locked||!count} onClick={()=>{setDrafts(d=>({...d,[selected.id]:{}}));setNotes(n=>({...n,[selected.id]:{}}));}}>Xóa chọn</button><button className="primary" disabled={locked||!count||!lastSync} onClick={sendOrder}>Gửi bếp</button></div></footer>}</>;
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);

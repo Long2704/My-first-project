@@ -1,4 +1,4 @@
-export type OrderLine = {id:string; name:string; price:number; qty:number; category:string; note:string; paid:boolean};
+export type OrderLine = {id:string; name:string; price:number; qty:number; category:string; note:string; paid:boolean; bill_no:number};
 export type Order = {id:string; request_id:string; session_id:string; status:'cooking'|'done'; kitchen_relevant:boolean; created_at:string; order_items:OrderLine[]};
 export type TableSession = {id:string; table_id:number; orders:Order[]};
 export function savedTotal(sessions:TableSession[], tableId:number){

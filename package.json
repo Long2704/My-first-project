@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test:browser": "node tests/order-flow.mjs",
-    "test:sql": "node tests/payment-sql.mjs"
+    "test:sql": "node tests/payment-sql.mjs",
+    "test:payments": "node tests/payment-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
