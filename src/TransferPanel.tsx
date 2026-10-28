@@ -35,7 +35,7 @@ export default function TransferPanel({userId,table,tables,sessions,disabled,onP
    }
    await onTransferred(attempt.to);
    localStorage.removeItem(key);
-   if(alive.current){setPending(null);setOpen(false);setTo('');setMessage(`Đã chuyển Bàn ${attempt.from} sang Bàn ${attempt.to}. Báo bếp và phục vụ vị trí mới.`);}
+   if(alive.current){setPending(null);setOpen(false);setTo('');setMessage(`Đã chuyển ${tables.find(t=>t.id===attempt.from)?.name??`Bàn ${attempt.from}`} sang ${tables.find(t=>t.id===attempt.to)?.name??`Bàn ${attempt.to}`}. Báo bếp và phục vụ vị trí mới.`);}
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Chưa xác nhận chuyển bàn. Dùng Thử lại cùng mã.');}
   finally{lock.current=false;if(alive.current)setBusy(false);}
  }
