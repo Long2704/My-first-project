@@ -40,6 +40,7 @@ function App(){
  const [receiptRequest,setReceiptRequest]=useState<{id:string;key:number}|null>(null);
  const managementNav=useRef<HTMLDetailsElement>(null);
  function navigate(next:View){setView(next);managementNav.current?.removeAttribute('open');}
+ const [menuExpandedFor,setMenuExpandedFor]=useState<number|null>(null);
  const [selected,setSelected]=useState<DiningTable|null>(null),[group,setGroup]=useState('bun');
  const [drafts,setDrafts]=useState<Record<number,Record<string,number>>>({}),[notes,setNotes]=useState<Record<number,Record<string,string>>>({});
  const [tablePending,setTablePending]=useState(false);
@@ -58,7 +59,7 @@ function App(){
   return()=>{active=false;subscription.unsubscribe();};
  },[]);
  useEffect(()=>{
-  setTableSearch('');setTableFilter('all');setMenuSearch('');setReceiptRequest(null);setProfile(null);setMenu([]);setTables([]);setDrafts({});setNotes({});setSelected(null);setSessions([]);setCooking([]);setPending(null);setError('');setMessage('');setLastSync('');setSyncError('');
+  setTableSearch('');setTableFilter('all');setMenuSearch('');setReceiptRequest(null);setProfile(null);setMenu([]);setTables([]);setDrafts({});setNotes({});setSelected(null);setMenuExpandedFor(null);setSessions([]);setCooking([]);setPending(null);setError('');setMessage('');setLastSync('');setSyncError('');
   if(!session||!supabase)return;
   const user=session.user.id;let active=true;setLoading(true);
   try{
@@ -126,7 +127,7 @@ function App(){
    if(r.error){
     if(r.error.code==='P0001'&&r.error.message==='Bàn không hoạt động.'){
      localStorage.removeItem(storageKey(user));
-     if(identity.current===user){setPending(null);setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));setSelected(null);}
+     if(identity.current===user){setPending(null);setMenuExpandedFor(null);setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));setSelected(null);}
      rejectedByMenu=true;
      throw new Error(`Đơn chưa được gửi vì bàn cũ đã ngừng hoạt động. Chọn bàn đang hoạt động và gọi lại: ${payload.items.map(i=>`${i.qty} × ${menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}${i.note?' ('+i.note+')':''}`).join('; ')}.`);
     }
@@ -138,7 +139,7 @@ function App(){
    }
    if(identity.current!==user)return;
    try{localStorage.removeItem(storageKey(user));}catch{/* Retained request ID is safe to retry after reload. */}
-   setPending(null);setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));
+   setPending(null);setMenuExpandedFor(null);setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));
    setMessage(`Đã lưu đơn ${tables.find(t=>t.id===payload.tableId)?.name??placeLabel(payload.tableId)}. Món ăn được gửi tới bếp; món nước không vào bếp.`);
    await refresh();
   }catch(e){if(identity.current===user)setError(rejectedByMenu?(e instanceof Error?e.message:'Thực đơn đã thay đổi. Kiểm tra lại trước khi gửi.'):`Chưa xác nhận gửi đơn: ${e instanceof Error?e.message:'Lỗi kết nối'}. Giữ nguyên đơn và bấm Thử gửi lại; không tạo đơn mới.`);}
@@ -153,6 +154,7 @@ function App(){
  const kitchen=history?historyOrders:fifo(cooking);
  const canComplete=profile&&['bep','chu','thu_ngan'].includes(profile.role);
  const currentOrders=selected?fifo(sessions.filter(s=>s.table_id===selected.id).flatMap(s=>s.orders)):[];
+ const showTableMenu=!!selected&&(!currentOrders.length||menuExpandedFor===selected.id||count>0||pending?.tableId===selected.id);
  const canCashier=!!profile&&['chu','thu_ngan'].includes(profile.role);
  const placeName=(id:number)=>tables.find(t=>t.id===id)?.name??placeLabel(id);
  const dineTables=tables.filter(t=>t.id>0);
@@ -185,13 +187,13 @@ function App(){
  const d=drafts[t.id]??{},draftTotal=menu.reduce((sum,i)=>sum+i.price*(d[i.id]||0),0);
  const known=pending?.tableId===t.id&&sessions.some(s=>s.orders.some(o=>o.request_id===pending.requestId));
  const amount=savedTotal(sessions,t.id)+(known?0:draftTotal),status=tableStatus(sessions,t.id);
- return <button className={`table-card ${(status==='Trống'||status==='Chưa gọi món')?'is-empty':status==='Bếp đang làm'?'is-cooking':'is-ready'}`} key={t.id} disabled={!lastSync} onClick={()=>{setSelected(t);setGroup('bun');setMenuSearch('');setMessage('');}}><div className="table-card-heading"><PosIcon name="tables"/><strong>{t.name}</strong></div><span className="table-total">{amount>0?money(amount):'Sẵn sàng phục vụ'}</span><span className="table-state">{lastSync?status:'Đang tải…'}</span>{draftTotal>0&&!known&&<small>Có món chưa xác nhận</small>}</button>;
+ return <button className={`table-card ${(status==='Trống'||status==='Chưa gọi món')?'is-empty':status==='Bếp đang làm'?'is-cooking':'is-ready'}`} key={t.id} disabled={!lastSync} onClick={()=>{setSelected(t);setMenuExpandedFor(null);setGroup('bun');setMenuSearch('');setMessage('');}}><div className="table-card-heading"><PosIcon name="tables"/><strong>{t.name}</strong></div><span className="table-total">{amount>0?money(amount):'Sẵn sàng phục vụ'}</span><span className="table-state">{lastSync?status:'Đang tải…'}</span>{draftTotal>0&&!known&&<small>Có món chưa xác nhận</small>}</button>;
  })}</div>{!visibleTables.length&&<div className="empty-state"><h3>Không tìm thấy bàn</h3><p>Thử đổi từ khóa hoặc bộ lọc.</p></div>}</>:<>
- <div className="menu-toolbar"><button className="back-button" onClick={()=>setSelected(null)}>{selected.id<0?'← Đơn mang về':'← Danh sách bàn'}</button><label className="search-field"><PosIcon name="search"/><input aria-label="Tìm món" placeholder="Tìm tên món…" value={menuSearch} onChange={e=>setMenuSearch(e.target.value)}/></label></div>
- <div className="selected-table-strip"><strong>{selected.name}</strong><span>{tableStatus(sessions,selected.id)} · Chọn món để gọi thêm</span></div>
- <nav className="menu-groups" aria-label="Nhóm món">{groups.map(g=><button key={g.id} aria-pressed={group===g.id} onClick={()=>setGroup(g.id)}>{g.name}</button>)}</nav>
+ <div className="menu-toolbar"><button className="back-button" onClick={()=>setSelected(null)}>{selected.id<0?'← Đơn mang về':'← Danh sách bàn'}</button>{showTableMenu&&<label className="search-field"><PosIcon name="search"/><input aria-label="Tìm món" placeholder="Tìm tên món…" value={menuSearch} onChange={e=>setMenuSearch(e.target.value)}/></label>}</div>
+ <div className="selected-table-strip"><strong>{selected.name}</strong><span>{tableStatus(sessions,selected.id)} · {showTableMenu?'Chọn món để gọi thêm':'Bấm + để thêm món'}</span></div>
+ {showTableMenu?<div id="table-menu" className="table-menu-content"><nav className="menu-groups" aria-label="Nhóm món">{groups.map(g=><button key={g.id} aria-pressed={group===g.id} onClick={()=>setGroup(g.id)}>{g.name}</button>)}</nav>
  {unavailableDraft&&!pending&&<aside className="notice error-notice" role="alert">Có món đang chọn đã hết hoặc ngừng bán. Bấm Xóa chọn rồi chọn lại trước khi gửi.</aside>}
- <fieldset disabled={locked||(selected.id<0&&!sessions.some(s=>s.table_id===selected.id))}><legend className="visually-hidden">Chọn món mới</legend><div className="menu-grid">{menu.filter(m=>m.category===group&&!m.is_out&&m.name.toLocaleLowerCase('vi-VN').includes(menuSearch.trim().toLocaleLowerCase('vi-VN'))).map(m=><article className="menu-card" key={m.id}><div className="menu-row"><div><h2>{m.name}</h2><strong>{money(m.price)}</strong></div><div className="counter"><button aria-label={'Bớt '+m.name} disabled={locked||!qty[m.id]} onClick={()=>changeQty(m.id,-1)}>−</button><output>{qty[m.id]||0}</output><button aria-label={'Thêm '+m.name} disabled={locked||(qty[m.id]||0)>=99} onClick={()=>changeQty(m.id,1)}>+</button></div></div>{!!qty[m.id]&&<label>Ghi chú món<input maxLength={500} placeholder="Ví dụ: ít bún, không hành" value={notes[selected.id]?.[m.id]??''} onChange={e=>{const value=e.target.value;setNotes(n=>({...n,[selected.id]:{...n[selected.id],[m.id]:value}}));}}/></label>}</article>)}</div></fieldset>
+ <fieldset disabled={locked||(selected.id<0&&!sessions.some(s=>s.table_id===selected.id))}><legend className="visually-hidden">Chọn món mới</legend><div className="menu-grid">{menu.filter(m=>m.category===group&&!m.is_out&&m.name.toLocaleLowerCase('vi-VN').includes(menuSearch.trim().toLocaleLowerCase('vi-VN'))).map(m=><article className="menu-card" key={m.id}><div className="menu-row"><div><h2>{m.name}</h2><strong>{money(m.price)}</strong></div><div className="counter"><button aria-label={'Bớt '+m.name} disabled={locked||!qty[m.id]} onClick={()=>changeQty(m.id,-1)}>−</button><output>{qty[m.id]||0}</output><button aria-label={'Thêm '+m.name} disabled={locked||(qty[m.id]||0)>=99} onClick={()=>changeQty(m.id,1)}>+</button></div></div>{!!qty[m.id]&&<label>Ghi chú món<input maxLength={500} placeholder="Ví dụ: ít bún, không hành" value={notes[selected.id]?.[m.id]??''} onChange={e=>{const value=e.target.value;setNotes(n=>({...n,[selected.id]:{...n[selected.id],[m.id]:value}}));}}/></label>}</article>)}</div></fieldset></div>:<button className="add-more-items" aria-label="Thêm món" aria-expanded={false} aria-controls="table-menu" onClick={()=>{setMenuExpandedFor(selected.id);setGroup('bun');setMenuSearch('');}}><span className="add-more-plus" aria-hidden="true">+</span><strong>Thêm món</strong></button>}
  </>}
  </section>
  <aside className="table-order" aria-label="Đơn của bàn">
@@ -205,7 +207,7 @@ function App(){
  </TableActions>
  {selected&&selected.id<0&&!sessions.some(s=>s.table_id===selected.id)&&lastSync&&<p role="status">Đơn cũ đã đóng. Quay lại danh sách bàn.</p>}
  <PaymentPanel key={session!.user.id} userId={session!.user.id} table={selected} sessions={sessions} canPay={canCashier} hasDraft={cancelTablePending||itemCancelBusy||billPending||tablePending||menuPending||transferPending||!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh} receiptRequest={receiptRequest} onReceiptError={setError}/>
- {selected&&<footer className="order-footer"><div><small>{selected.name} · {count} món chọn thêm</small><strong>{money(total)}</strong></div><div className="footer-actions"><button disabled={locked||!count} onClick={()=>{setDrafts(d=>({...d,[selected.id]:{}}));setNotes(n=>({...n,[selected.id]:{}}));}}>Xóa chọn</button><button className="primary" disabled={locked||!count||!lastSync||unavailableDraft||(selected.id<0&&!sessions.some(s=>s.table_id===selected.id))} onClick={sendOrder}>Gửi bếp</button></div></footer>}
+ {selected&&showTableMenu&&<footer className="order-footer"><div><small>{selected.name} · {count} món chọn thêm</small><strong>{money(total)}</strong></div><div className="footer-actions"><button disabled={locked||!count} onClick={()=>{setDrafts(d=>({...d,[selected.id]:{}}));setNotes(n=>({...n,[selected.id]:{}}));}}>Xóa chọn</button><button className="primary" disabled={locked||!count||!lastSync||unavailableDraft||(selected.id<0&&!sessions.some(s=>s.table_id===selected.id))} onClick={sendOrder}>Gửi bếp</button></div></footer>}
  </aside></div></div>
  {view==='kitchen'&&<div className="kitchen-page"><KitchenTools key={`kitchen-tools:${session!.user.id}`} orders={cooking} ready={!!lastSync} onFreshChange={setFreshKitchenIds} onShowQueue={()=>setHistory(false)}/><nav className="kitchen-tabs" aria-label="Đơn bếp"><button aria-pressed={!history} onClick={()=>setHistory(false)}>Đang làm ({cooking.length})</button><button aria-pressed={history} onClick={()=>setHistory(true)}>Lịch sử</button></nav><p className="swipe-help">Vuốt đơn sang trái hoặc phải để hoàn thành.</p><section className="kitchen-grid">{kitchen.map((o,index)=><SwipeOrderCard disabled={!!history||!canComplete||!!completing||cancelTablePending||itemCancelBusy||!!syncError} onComplete={()=>complete(o.id)} className={`kitchen-card ${!history&&index===0?'first-order':''} ${!history&&freshKitchenIds.includes(o.id)?'new-kitchen-order':''}`} key={o.id}><div className="order-heading"><h2 className="kitchen-table-path">{o.service_label||(o.table_path?.length?o.table_path:o.table_sessions.table_path?.length?o.table_sessions.table_path:[o.table_sessions.table_id]).map(placeName).join(' → ')}</h2><span>{new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · {Math.max(0,Math.floor((Date.now()-Date.parse(o.created_at))/60000))} phút</span></div><small>Đơn {o.id.slice(0,8)}{!history&&freshKitchenIds.includes(o.id)&&<strong className="new-order-badge">Mới</strong>}</small><ul>{kitchenLines(o).map(i=><li key={i.id}><strong>{i.qty} × {i.name}</strong>{i.note&&<p className="item-note">{i.note}</p>}</li>)}</ul>{!history&&canComplete&&<button className="primary" disabled={!!completing||cancelTablePending||itemCancelBusy||!!syncError} onClick={()=>void complete(o.id)}>{completing===o.id?'Đang lưu…':'Xong'}</button>}</SwipeOrderCard>)}{!kitchen.length&&<div className="empty-state"><h3>{history?'Chưa có đơn đã xong của các bàn đang mở.':'Chưa có món đang làm.'}</h3></div>}</section></div>}
  {profile.role==='chu'&&<div className="management-page" hidden={view!=='tables'}><TableManagement key={`tables:${session!.user.id}`} userId={session!.user.id} active={view==='tables'} disabled={menuPending||cancelTablePending||itemCancelBusy||billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTablePending} onSaved={refresh}/></div>}
