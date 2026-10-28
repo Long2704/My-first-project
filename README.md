@@ -179,3 +179,15 @@ Chạy `supabase/migrations/014_fixed_takeaway_table.sql` sau 013. Thêm đúng 
 Bếp hiển thị tên Mang về trên đường đi bàn; hóa đơn và nhật ký lưu tên bàn theo thời điểm giao dịch. Không sửa các snapshot hóa đơn cũ. Migration tự chọn ID dương tiếp theo, không hard-code số 13, không tạo bàn trùng nếu đã có bàn tên Mang về. Nếu bảng có sequence/identity, đồng bộ sequence sau khi thêm bàn.
 
 `test:takeaway` kiểm tra migration, một bàn cố định, ngừng RPC cũ, giữ đơn cũ, thanh toán/hủy/chuyển bàn và dùng lại bàn sau khi đóng phiên. `test:takeaway-ui` kiểm tra sơ đồ 13 bàn gồm Mang về, không còn tab/nút mở đơn, gọi món/bếp/thanh toán thử lại/hóa đơn/hủy và nhận khách tiếp theo. SQL trên PGlite, Chromium dùng Supabase giả lập; chưa kiểm thử nhiều phiên PostgreSQL đồng thời hoặc thiết bị cảm ứng thật.
+
+## Quản lý bàn trong ứng dụng
+
+Chạy `supabase/migrations/015_table_management.sql` một lần sau 013 hoặc 014. Tệp đã bao gồm bản sửa giới hạn ID bàn và bàn Mang về cố định của 014; nếu chưa chạy 014 thành công thì chạy thẳng 015, không cần chạy 014 riêng.
+
+Tài khoản chủ quán vào Quản lý → Quản lý bàn → Thêm bàn, nhập tên và bấm Lưu bàn. ID được cấp tự động. Sửa bàn để đổi tên hoặc bỏ chọn Đang sử dụng để ẩn khỏi sơ đồ; có thể bật lại. Không xóa dữ liệu bàn/đơn/hóa đơn cũ. Tên từ 1–80 ký tự, không trùng tên bàn khác (kể cả bàn đã ngừng sử dụng, không phân biệt hoa/thường).
+
+Bàn đang có phiên khách hoặc liên quan đến đơn bếp còn làm không sửa/ngừng sử dụng được. Server kiểm tra lại dưới khóa bàn. Hóa đơn đã lưu vẫn giữ tên bàn tại thời điểm thanh toán. Cập nhật bàn được ghi nhật ký. Thu ngân/phục vụ/bếp không có quyền RPC quản lý bàn.
+
+App lưu mã cập nhật bàn theo tài khoản trước khi gửi; mất phản hồi hoặc tải lại thì Thử lại cùng mã cập nhật bàn, tránh thêm bàn trùng. Khi có cập nhật chờ, xử lý từ Mở quản lý bàn; không xóa dữ liệu trình duyệt. Nếu bản sửa ở thiết bị khác đã mới hơn, tải lại và kiểm tra trước khi lưu yêu cầu mới. Các thiết bị phục vụ khác nhận danh sách sau lần đồng bộ tiếp theo.
+
+`test:table-management` kiểm tra nâng cấp trực tiếp sau 013 còn check 1..12 và sau 014, quyền/RLS, tạo ID14, retry, tên trùng, version cũ, bàn có khách/món bếp chưa xong, ngừng/bật lại, snapshot hóa đơn và nhật ký. `test:table-management-ui` kiểm tra menu chủ quán, retry sau reload, cập nhật sơ đồ, đổi tên/ngừng/bật lại, xung đột và giao diện mobile. SQL dùng PGlite, Chromium dùng Supabase giả lập; chưa kiểm chứng nhiều phiên PostgreSQL đồng thời.
