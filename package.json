@@ -26,6 +26,8 @@
     "test:table-actions": "node tests/table-actions-flow.mjs",
     "test:takeaway-ui": "node tests/takeaway-flow.mjs",
     "test:table-management-ui": "node tests/table-management-flow.mjs",
+    "test:table-order-ui": "node tests/table-order-flow.mjs",
+    "test:table-order": "node tests/table-order-sql.mjs",
     "test:table-management": "node tests/table-management-sql.mjs",
     "test:takeaway": "node tests/fixed-takeaway-sql.mjs",
     "test:table-merge": "node tests/table-merge-sql.mjs",

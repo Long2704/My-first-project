@@ -70,7 +70,7 @@ function App(){
     const p=await supabase!.from('profiles').select('name,role').eq('id',user).maybeSingle();
     if(p.error)throw new Error('Không đọc được hồ sơ nhân viên.');
     if(!p.data||!roles[p.data.role])throw new Error('Tài khoản chưa được cấp vai trò hợp lệ.');
-    const [m,t]=await Promise.all([supabase!.from('menu_items').select('id,name,price,category,is_out').eq('is_active',true).order('sort').order('id'),supabase!.from('restaurant_tables').select('id,name').eq('is_active',true).order('id')]);
+    const [m,t]=await Promise.all([supabase!.from('menu_items').select('id,name,price,category,is_out').eq('is_active',true).order('sort').order('id'),supabase!.from('restaurant_tables').select('id,name').eq('is_active',true).order('display_order').order('id')]);
     if(m.error||t.error)throw new Error('Không tải được thực đơn hoặc danh sách bàn.');
     if(active){setProfile(p.data);setMenu(m.data??[]);setTables(t.data??[]);setView(p.data.role==='bep'?'kitchen':'service');}
    }catch(e){if(active)setError(e instanceof Error?e.message:'Không thể tải dữ liệu.');}finally{if(active)setLoading(false);}
@@ -85,7 +85,7 @@ function App(){
     supabase.from('table_sessions').select(`id,table_id,table_path,orders(${orderFields})`).is('closed_at',null),
     supabase.from('orders').select(`${orderFields},table_sessions!inner(table_id,closed_at,table_path)`).eq('status','cooking').eq('kitchen_relevant',true).order('created_at').order('id'),
     supabase.from('menu_items').select('id,name,price,category,is_out').eq('is_active',true).order('sort').order('id'),
-    supabase.from('restaurant_tables').select('id,name').eq('is_active',true).order('id')
+    supabase.from('restaurant_tables').select('id,name').eq('is_active',true).order('display_order').order('id')
    ]);
    if(s.error||k.error||m.error||t.error)throw new Error();
    if(identity.current===user){
