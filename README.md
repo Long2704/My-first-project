@@ -205,7 +205,7 @@ Yêu cầu lưu thứ tự giữ mã và snapshot thứ tự cũ/mới trong loc
 
 ## Ẩn menu khi mở lại bàn đã gọi món
 
-Bàn chưa có đơn mở menu ngay. Với bàn đã có đơn, khi chọn lại bàn sẽ thấy nút + Thêm món thay cho menu; bấm nút để mở menu gọi thêm. Các món đã lưu, thao tác bàn và thanh toán vẫn hiển thị. Sau khi gửi món thành công, menu tự thu gọn lại.
+Bàn chưa có đơn mở menu ngay. Với bàn đã có đơn, khi chọn lại bàn sẽ thấy đơn đã gọi chiếm phần nội dung chính và nút + hình tròn nhỏ bên phải đầu đơn; bấm nút để mở menu gọi thêm. Các món đã lưu, thao tác bàn và thanh toán vẫn hiển thị. Sau khi gửi món thành công, menu tự thu gọn lại.
 
 Nếu bàn còn món đang chọn chưa gửi hoặc có yêu cầu gửi chờ xác nhận, giữ menu mở để kiểm tra món/ghi chú và thử lại; không ẩn giỏ dở khi đổi màn hình hoặc chọn lại bàn. Khi bàn đã thanh toán/hủy hết và trở lại trống, menu mở bình thường cho khách tiếp theo. Không có migration mới.
 

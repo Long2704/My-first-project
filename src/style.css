@@ -21,4 +21,6 @@
 
 .table-order-controls{position:sticky;top:8px;z-index:2}
 
-.table-menu-content{display:grid;gap:12px}.add-more-items{min-height:180px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border:1px dashed #d4b49f;background:#fff;color:var(--brand)}.add-more-plus{width:58px;height:58px;border-radius:50%;background:var(--brand-soft);display:grid;place-items:center;font-size:38px;line-height:1;font-weight:400}.add-more-items strong{font-size:15px}
+.table-menu-content{display:grid;gap:12px}
+
+.add-more-items{position:absolute;right:62px;top:14px;width:36px;height:36px;min-height:36px;border-radius:50%;padding:0;display:grid;place-items:center;border:1px solid #e5c7b9;background:var(--brand-soft);color:var(--brand);font-size:26px;line-height:1;font-weight:400}.service-layout.order-only{grid-template-columns:minmax(0,1fr);gap:8px}.order-only .menu-toolbar{margin-bottom:0}.order-only .order-panel-heading{padding-right:108px}.order-only .saved-orders{max-height:none;overflow:visible}
