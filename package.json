@@ -25,7 +25,7 @@
     "test:layout": "node tests/layout-flow.mjs",
     "test:table-actions": "node tests/table-actions-flow.mjs",
     "test:takeaway-ui": "node tests/takeaway-flow.mjs",
-    "test:takeaway": "node tests/takeaway-sql.mjs",
+    "test:takeaway": "node tests/fixed-takeaway-sql.mjs",
     "test:table-merge": "node tests/table-merge-sql.mjs",
     "test:table-cancel": "node tests/table-cancel-sql.mjs",
     "test:table-workflows": "node tests/table-workflows-flow.mjs"

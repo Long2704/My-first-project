@@ -1,0 +1,61 @@
+import {PGlite} from '@electric-sql/pglite';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+try{
+await db.exec(`
+create role anon; create role authenticated;
+create schema auth;
+create table auth.users(id uuid primary key);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
+grant usage on schema auth to authenticated,anon;
+create table public.profiles(id uuid primary key references auth.users(id), name text not null, role text not null);
+create table public.menu_items(id uuid primary key default gen_random_uuid(),name text not null,price integer not null,category text not null,is_active boolean default true,is_out boolean default false,sort integer default 0);
+create table public.restaurant_tables(id integer primary key, name text not null,is_active boolean default true);
+create function public.current_staff_role() returns text language sql stable security definer set search_path='' as $$ select role from public.profiles where id=auth.uid() $$;
+insert into auth.users values ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002'),('00000000-0000-0000-0000-000000000003');
+insert into public.profiles values ('00000000-0000-0000-0000-000000000001','Owner','chu'),('00000000-0000-0000-0000-000000000002','Service','phuc_vu'),('00000000-0000-0000-0000-000000000003','Kitchen','bep');
+insert into public.restaurant_tables(id,name) values (1,'Bàn 1'),(2,'Bàn 2');
+insert into public.menu_items(id,name,price,category) values ('10000000-0000-0000-0000-000000000001','Bún riêu',58000,'bun'),('10000000-0000-0000-0000-000000000002','Trà đá',3000,'do_uong');
+`);
+for(const file of ['003_ordering.sql','004_payments.sql','005_cancellations_audit.sql','006_revenue_report.sql','007_table_transfer.sql','008_menu_management.sql','009_split_bills.sql','010_optional_transfer_reason.sql','011_cancellations_kitchen_history.sql','012_table_actions_merge.sql','013_takeaway.sql'])await db.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+const user=async n=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[`00000000-0000-0000-0000-00000000000${n}`]);await db.exec('set role authenticated');};
+const one=async(sql,p=[])=> (await db.query(sql,p)).rows[0];
+await db.exec("insert into auth.users values('00000000-0000-0000-0000-000000000004');insert into public.profiles values('00000000-0000-0000-0000-000000000004','Cashier','thu_ngan');");
+await user(1);
+const food='10000000-0000-0000-0000-000000000001',drink='10000000-0000-0000-0000-000000000002';
+
+await db.exec('reset role');await db.exec('grant select on public.restaurant_tables,public.menu_items to authenticated');await user(1);
+
+const empty=(await one("select public.create_takeaway(gen_random_uuid(),'Trống cũ') r")).r;
+const legacy=(await one("select public.create_takeaway(gen_random_uuid(),'Đơn cũ') r")).r;
+const payload=JSON.stringify([{menu_item_id:food,qty:1,note:'Không hành'}]);
+const oldOrder=(await one('select public.submit_order($1,gen_random_uuid(),$2::jsonb) id',[legacy.id,payload])).id;
+await db.exec('reset role');await db.exec(readFileSync(new URL('../supabase/migrations/014_fixed_takeaway_table.sql',import.meta.url),'utf8'));await user(1);
+const fixed=await one("select * from public.restaurant_tables where name='Mang về'");assert.ok(fixed.id>0);assert.equal(fixed.service_type,'dine_in');
+assert.equal((await one("select count(*)::int n from public.restaurant_tables where name='Mang về'")).n,1);
+await assert.rejects(db.query("select public.create_takeaway(gen_random_uuid(),'')"),/permission denied/);
+await assert.rejects(db.query('select public.close_empty_takeaway($1)',[empty.session_id]),/permission denied/);
+assert.notEqual((await one('select closed_at from public.table_sessions where id=$1',[empty.session_id])).closed_at,null);
+assert.equal((await one('select closed_at from public.table_sessions where id=$1',[legacy.session_id])).closed_at,null);
+assert.equal((await one('select service_label from public.orders where id=$1',[oldOrder])).service_label,legacy.name);
+const req=crypto.randomUUID();const submit=()=>one('select public.submit_order($1,$2,$3::jsonb) id',[fixed.id,req,payload]);
+const order=(await submit()).id;assert.equal((await submit()).id,order);
+const session=(await one('select session_id from public.orders where id=$1',[order])).session_id;
+const ids=(await db.query('select id from public.order_items where order_id=$1',[order])).rows.map(i=>i.id);
+const paid=(await one("select public.pay_bill($1,gen_random_uuid(),'cash',$2::uuid[]) id",[session,ids])).id;
+assert.equal((await one('select service_label from public.bills where id=$1',[paid])).service_label,'Mang về');
+assert.equal((await one('select is_active from public.restaurant_tables where id=$1',[fixed.id])).is_active,true);
+assert.equal((await one("select extra->>'place_label' label from public.audit_log where bill_id=$1",[paid])).label,'Mang về');
+const second=(await one('select public.submit_order($1,gen_random_uuid(),$2::jsonb) id',[fixed.id,payload])).id;
+const nextSession=(await one('select session_id from public.orders where id=$1',[second])).session_id;assert.notEqual(nextSession,session);
+await db.query('select public.transfer_table($1,$2,2,gen_random_uuid())',[nextSession,fixed.id]);
+await db.query('select public.transfer_table($1,2,$2,gen_random_uuid())',[nextSession,fixed.id]);
+const nextIds=(await db.query('select id from public.order_items where order_id=$1',[second])).rows.map(i=>i.id);
+await db.query('select public.cancel_table_session($1,gen_random_uuid(),$2::uuid[])',[nextSession,nextIds]);
+assert.equal((await one('select is_active from public.restaurant_tables where id=$1',[fixed.id])).is_active,true);
+const legacyIds=(await db.query('select id from public.order_items where order_id=$1',[oldOrder])).rows.map(i=>i.id);
+await db.query("select public.pay_bill($1,gen_random_uuid(),'cash',$2::uuid[])",[legacy.session_id,legacyIds]);
+assert.equal((await one('select count(*)::int n from public.bills')).n,2);
+console.log('PASS: one fixed positive Mang về table, old creation/empty RPCs disabled, empty legacy retired, open legacy preserved/payable, submit retry, named invoice/audit, normal payment/reseat/transfer/cancel and fixed table stays active. PGlite only.');
+}finally{await db.close();}
