@@ -1,9 +1,10 @@
 import {useEffect,useRef,useState} from 'react';
 import {supabase} from './supabase';
+import {downloadCsv,revenueExport} from './revenue-export';
+import type {RevenueReport as Report} from './revenue-export';
+import PosIcon from './PosIcon';
 const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-type Day={day:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number};
-type Report={from:string;to:string;generated_at:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number;days:Day[];products:{name:string;qty:number;gross:number}[]};
 export default function RevenuePanel({active}:{active?:boolean}){
  const [open,setOpen]=useState(false),[from,setFrom]=useState(today),[to,setTo]=useState(today);
  const [report,setReport]=useState<Report|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -22,6 +23,11 @@ export default function RevenuePanel({active}:{active?:boolean}){
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Không tải được báo cáo.');}
   finally{lock.current=false;if(alive.current)setBusy(false);}
  }
+ function exportReport(kind:'revenue'|'products'){
+  if(!report||busy||report.from!==from||report.to!==to)return;
+  try{downloadCsv(revenueExport(report,kind));setError('');}
+  catch{setError('Không tải được tệp CSV. Kiểm tra quyền tải tệp của trình duyệt rồi thử lại.');}
+ }
  const stale=!!report&&(report.from!==from||report.to!==to);
  return <section className="revenue-panel" aria-label="Báo cáo doanh thu">
  {active===undefined&&<button aria-expanded={open} onClick={()=>setOpen(v=>!v)}>Báo cáo doanh thu</button>}
@@ -35,6 +41,7 @@ export default function RevenuePanel({active}:{active?:boolean}){
  </form>{!valid&&<p role="alert">Chọn ngày bắt đầu không sau ngày kết thúc, tối đa 366 ngày.</p>}
  {error&&<p role="alert">{error}</p>}{stale&&<p role="status">Khoảng ngày đã đổi. Bấm Xem báo cáo để cập nhật.</p>}
  {report&&!stale&&<div className="report-result"><p>Khoảng {report.from} — {report.to} · Cập nhật {new Date(report.generated_at).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</p>
+ <div className="report-export-actions"><button disabled={busy} onClick={()=>exportReport('revenue')}><PosIcon name="download"/>Xuất doanh thu CSV</button><button disabled={busy||!report.products.length} onClick={()=>exportReport('products')}><PosIcon name="download"/>Xuất 20 món CSV</button></div><p className="report-export-hint">Mở tệp CSV bằng Excel hoặc Google Sheets. Đơn vị tiền: VND. Tệp món chỉ gồm tối đa 20 món đang hiển thị.</p>
  <dl className="report-totals">{[['Doanh thu thực thu',money(report.total)],['Số hóa đơn',report.invoices],['Tiền trước giảm giá',money(report.gross)],['Giảm giá',money(report.discount)],['Tiền mặt',money(report.cash)],['Chuyển khoản',money(report.transfer)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
  {!report.invoices?<p>Chưa có hóa đơn đã thanh toán trong khoảng ngày này.</p>:<><h3>Doanh thu từng ngày</h3><div className="report-table"><table><thead><tr><th>Ngày</th><th>Hóa đơn</th><th>Thực thu</th><th>Tiền mặt</th><th>Chuyển khoản</th></tr></thead><tbody>{report.days.map(d=><tr key={d.day}><td>{d.day}</td><td>{d.invoices}</td><td>{money(d.total)}</td><td>{money(d.cash)}</td><td>{money(d.transfer)}</td></tr>)}</tbody></table></div>
  <h3>20 món bán nhiều nhất</h3><p>Gộp theo tên món trên hóa đơn; tiền món trước giảm giá hóa đơn.</p><div className="report-table"><table><thead><tr><th>Món</th><th>Số lượng</th><th>Tiền món</th></tr></thead><tbody>{report.products.map(p=><tr key={p.name}><td>{p.name}</td><td>{p.qty}</td><td>{money(p.gross)}</td></tr>)}</tbody></table></div></>}

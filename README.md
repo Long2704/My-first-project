@@ -158,3 +158,14 @@ Chuyển bàn có thể chọn bàn trống hoặc bàn đang có đơn. Bàn đ
 Yêu cầu chuyển lưu phiên bàn đích đã chọn. Server khóa hai bàn theo thứ tự, kiểm tra phiên đích vẫn đúng và lưu kết quả trong một giao dịch. Bàn đích đổi lượt khách/đóng/chuyển trước khi xử lý sẽ bị từ chối để đồng bộ và chọn lại. Mất phản hồi/reload dùng cùng mã yêu cầu, không gộp lần hai hoặc ảnh hưởng lượt khách mới. Các yêu cầu gọi món, tách bill và thanh toán đã hoàn tất từ trước vẫn thử lại được bằng mã cũ; yêu cầu mới đối với phiên nguồn đã đóng bị từ chối.
 
 Kiểm thử `test:table-merge` dùng PGlite cho gộp bàn, phân quyền, phiên đích thay đổi, bill riêng, hóa đơn cũ, retry, đường đi và thanh toán/bếp sau gộp. `test:table-actions` dùng Chromium với Supabase giả lập để kiểm tra icon/pop-up, bàn đích có đơn, thử lại sau reload, tách bill không lý do, đường đi riêng và kích thước điện thoại. Chưa thử nhiều phiên PostgreSQL đồng thời hoặc thiết bị cảm ứng thật.
+
+## Xuất báo cáo CSV
+
+Trong Quản lý → Báo cáo doanh thu, chọn khoảng ngày và bấm Xem báo cáo, sau đó:
+
+- Xuất doanh thu CSV: doanh thu từng ngày và dòng Tổng cộng ở cuối, gồm số hóa đơn, tiền trước giảm, giảm giá, thực thu, tiền mặt và chuyển khoản.
+- Xuất 20 món CSV: tối đa 20 món bán nhiều nhất của báo cáo, số lượng và tiền món trước giảm giá hóa đơn. Nút không khả dụng khi không có món.
+
+Tệp có tên theo khoảng ngày, tiếng Việt UTF-8 BOM, số tiền dạng số với đơn vị VND, thời gian cập nhật theo giờ Việt Nam. Mở bằng Excel hoặc nhập CSV vào Google Sheets. Khi tổng hợp tiếp, không cộng dòng Tổng cộng lần nữa vào các dòng ngày. Đây là dữ liệu của lần Xem báo cáo gần nhất; bấm Xem báo cáo lại để lấy giao dịch vừa phát sinh. Đổi khoảng ngày sẽ ẩn kết quả và nút xuất cho đến khi tải báo cáo mới. Báo cáo trống vẫn xuất được doanh thu tổng bằng 0.
+
+Không có migration mới. Dùng dữ liệu RPC báo cáo đã có, không gọi thêm RPC khi tải tệp và giữ quyền chủ/thu ngân. `npm run test:revenue-export` kiểm tra định dạng, dấu tiếng Việt, ký tự đặc biệt, số tiền và nội dung bắt đầu bằng công thức; `npm run test:revenue-ui` kiểm tra tải tệp thực tế trên Chromium với Supabase giả lập, khoảng ngày, dữ liệu trống/lỗi và phân quyền giao diện.

@@ -13,6 +13,7 @@
     "test:cancellations": "node tests/cancellation-sql.mjs",
     "test:cancellation-ui": "node tests/cancellation-flow.mjs",
     "test:revenue": "node tests/revenue-sql.mjs",
+    "test:revenue-export": "node tests/revenue-export.mjs",
     "test:revenue-ui": "node tests/revenue-flow.mjs",
     "test:transfer": "node tests/transfer-sql.mjs",
     "test:transfer-ui": "node tests/transfer-flow.mjs",
