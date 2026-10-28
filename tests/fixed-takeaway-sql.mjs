@@ -31,8 +31,11 @@ const empty=(await one("select public.create_takeaway(gen_random_uuid(),'Trống
 const legacy=(await one("select public.create_takeaway(gen_random_uuid(),'Đơn cũ') r")).r;
 const payload=JSON.stringify([{menu_item_id:food,qty:1,note:'Không hành'}]);
 const oldOrder=(await one('select public.submit_order($1,gen_random_uuid(),$2::jsonb) id',[legacy.id,payload])).id;
-await db.exec('reset role');await db.exec(readFileSync(new URL('../supabase/migrations/014_fixed_takeaway_table.sql',import.meta.url),'utf8'));await user(1);
-const fixed=await one("select * from public.restaurant_tables where name='Mang về'");assert.ok(fixed.id>0);assert.equal(fixed.service_type,'dine_in');
+await db.exec('reset role');
+await db.exec("insert into public.restaurant_tables(id,name) select n,'Bàn '||n from generate_series(3,12) n;alter table public.restaurant_tables add constraint restaurant_tables_id_check check(id between 1 and 12) not valid");
+await assert.rejects(db.exec("insert into public.restaurant_tables(id,name) values(13,'Probe')"),/restaurant_tables_id_check/);
+await db.exec(readFileSync(new URL('../supabase/migrations/014_fixed_takeaway_table.sql',import.meta.url),'utf8'));await user(1);
+const fixed=await one("select * from public.restaurant_tables where name='Mang về'");assert.equal(fixed.id,13);assert.equal(fixed.service_type,'dine_in');
 assert.equal((await one("select count(*)::int n from public.restaurant_tables where name='Mang về'")).n,1);
 await assert.rejects(db.query("select public.create_takeaway(gen_random_uuid(),'')"),/permission denied/);
 await assert.rejects(db.query('select public.close_empty_takeaway($1)',[empty.session_id]),/permission denied/);
@@ -57,5 +60,5 @@ assert.equal((await one('select is_active from public.restaurant_tables where id
 const legacyIds=(await db.query('select id from public.order_items where order_id=$1',[oldOrder])).rows.map(i=>i.id);
 await db.query("select public.pay_bill($1,gen_random_uuid(),'cash',$2::uuid[])",[legacy.session_id,legacyIds]);
 assert.equal((await one('select count(*)::int n from public.bills')).n,2);
-console.log('PASS: one fixed positive Mang về table, old creation/empty RPCs disabled, empty legacy retired, open legacy preserved/payable, submit retry, named invoice/audit, normal payment/reseat/transfer/cancel and fixed table stays active. PGlite only.');
+console.log('PASS: original 1..12 constraint reproduces insert failure; migration adds fixed Mang về at id13, old creation/empty RPCs disabled, empty legacy retired, open legacy preserved/payable, submit retry, named invoice/audit, normal payment/reseat/transfer/cancel and fixed table stays active. PGlite only.');
 }finally{await db.close();}

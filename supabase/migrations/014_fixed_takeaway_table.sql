@@ -1,6 +1,9 @@
 -- Chạy sau 013. Thêm một bàn cố định Mang về, không xóa hóa đơn/đơn cũ.
 begin;
 lock table public.restaurant_tables in share row exclusive mode;
+-- Bảng gốc có thể giới hạn id trong 1..12. service_identity (013) vẫn kiểm tra
+-- id dương cho bàn thường và id âm cho các đơn mang về cũ.
+alter table public.restaurant_tables drop constraint if exists restaurant_tables_id_check;
 do $$
 declare v_id integer;v_seq text;
 begin
