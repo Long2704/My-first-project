@@ -1,3 +1,4 @@
+import {placeLabel} from './order-model';
 import PosIcon from './PosIcon';
 import {useEffect,useRef,useState} from 'react';
 import {supabase} from './supabase';
@@ -34,14 +35,14 @@ export default function BillPanel({userId,table,sessions,disabled,onPending,onCh
     throw new Error(['PGRST202','42883'].includes(r.error.code)?'Cần chạy migration 012_table_actions_merge.sql rồi Thử lại cùng mã tách/gộp.':`Chưa xác nhận tách/gộp: ${r.error.message}. Thử lại cùng mã tách/gộp.`);
    }
    await onChanged(attempt.tableId);localStorage.removeItem(key);
-   if(alive.current){setPending(null);setDraft(null);setIds([]);setMessage(`Đã chuyển ${attempt.itemIds.length} dòng món từ Bill ${attempt.from} sang Bill ${r.data} của Bàn ${attempt.tableId}. Chưa thu tiền.`);}
+   if(alive.current){setPending(null);setDraft(null);setIds([]);setMessage(`Đã chuyển ${attempt.itemIds.length} dòng món từ Bill ${attempt.from} sang Bill ${r.data} của ${placeLabel(attempt.tableId)}. Chưa thu tiền.`);}
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Chưa xác nhận tách/gộp. Thử lại cùng mã tách/gộp.');}
   finally{lock.current=false;if(alive.current)setBusy(false);}
  }
  return <section className="bill-panel" aria-label="Tách gộp bill">
  {table&&!!unpaid.length&&!pending&&<button disabled={disabled||busy||storageError} onClick={()=>start()}><PosIcon name="split"/><span>Tách/gộp bill {table.name}</span></button>}
  {storageError&&<p role="alert">Không đọc được yêu cầu tách/gộp bill chờ. Không xóa dữ liệu trình duyệt; liên hệ hỗ trợ.</p>}
- {pending&&<aside role="status"><strong>Tách/gộp bill chờ xác nhận · Bàn {pending.tableId} · Bill {pending.from}</strong><p>{pending.itemIds.length} dòng món → {pending.to===0?'Bill mới':`Bill ${pending.to}`}</p><button disabled={busy} onClick={()=>void move()}>{busy?'Đang xử lý…':'Thử lại cùng mã tách/gộp'}</button></aside>}
+ {pending&&<aside role="status"><strong>Tách/gộp bill chờ xác nhận · {placeLabel(pending.tableId)} · Bill {pending.from}</strong><p>{pending.itemIds.length} dòng món → {pending.to===0?'Bill mới':`Bill ${pending.to}`}</p><button disabled={busy} onClick={()=>void move()}>{busy?'Đang xử lý…':'Thử lại cùng mã tách/gộp'}</button></aside>}
  {draft&&current?.id===draft.sessionId&&!pending&&<form className="bill-move-form" onSubmit={e=>{e.preventDefault();void move();}}><h3>Chọn dòng món cần tách/gộp</h3><p>Chuyển toàn bộ số lượng của từng dòng món. Giữ nguyên món bếp; chỉ chọn món chưa trả tiền, chưa hủy.</p>
  <fieldset disabled={disabled||busy||storageError}><label htmlFor="bill-source">Bill nguồn</label><select id="bill-source" value={draft.from} onChange={e=>start(Number(e.target.value))}>{bills.map(b=><option key={b} value={b}>Bill {b}</option>)}</select>
  <button type="button" onClick={()=>setIds(draft.items.map(i=>i.id))}>Chọn tất cả dòng</button><button type="button" onClick={()=>setIds([])}>Bỏ chọn dòng</button>

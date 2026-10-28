@@ -1,3 +1,4 @@
+import {placeLabel} from './order-model';
 import PosIcon from './PosIcon';
 import {useEffect,useRef,useState} from 'react';
 import {supabase} from './supabase';
@@ -27,15 +28,15 @@ export default function CancelTablePanel({userId,table,sessions,disabled,onPendi
     throw new Error(['PGRST202','42883'].includes(r.error.code)?'Cần chạy migration 011_cancellations_kitchen_history.sql rồi Thử lại cùng mã hủy bàn.':`Chưa xác nhận hủy bàn: ${r.error.message}. Thử lại cùng mã hủy bàn.`);
    }
    if(alive.current)setOpen(false);await onChanged();localStorage.removeItem(key);
-   if(alive.current){setPending(null);setDraft(null);onMessage(`Đã hủy các món chưa thanh toán của Bàn ${attempt.tableId}. Hóa đơn đã trả được giữ nguyên.`);}
+   if(alive.current){setPending(null);setDraft(null);onMessage(`Đã hủy các món chưa thanh toán của ${placeLabel(attempt.tableId)}. Hóa đơn đã trả được giữ nguyên.`);}
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Chưa xác nhận hủy bàn. Thử lại cùng mã hủy bàn.');}
   finally{lock.current=false;if(alive.current)setBusy(false);}
  }
  const snapshot=pending??draft;
- return <section className="cancel-table-panel" aria-label="Hủy bàn">{table&&lines.length>0&&!pending&&<button className="danger-outline" disabled={disabled||busy||storageError} onClick={start}><PosIcon name="cancel"/><span>Hủy cả {table.name}</span></button>}
+ return <section className="cancel-table-panel" aria-label="Hủy bàn">{table&&lines.length>0&&!pending&&<button className="danger-outline" disabled={disabled||busy||storageError} onClick={start}><PosIcon name="cancel"/><span>{table.id<0?'Hủy đơn':'Hủy cả'} {table.name}</span></button>}
  {storageError&&<p role="alert">Không đọc được yêu cầu hủy bàn chờ. Không xóa dữ liệu trình duyệt; liên hệ hỗ trợ.</p>}
- {pending&&<aside role="status"><strong>Hủy bàn chờ xác nhận · Bàn {pending.tableId}</strong><p>Giữ nguyên mã và danh sách {pending.items.length} dòng món.</p><button disabled={busy} onClick={()=>{setOpen(true);}}>Kiểm tra yêu cầu hủy bàn</button></aside>}
+ {pending&&<aside role="status"><strong>Hủy bàn chờ xác nhận · {placeLabel(pending.tableId)}</strong><p>Giữ nguyên mã và danh sách {pending.items.length} dòng món.</p><button disabled={busy} onClick={()=>{setOpen(true);}}>Kiểm tra yêu cầu hủy bàn</button></aside>}
  {!open&&error&&<p role="alert">{error}</p>}
- <ConfirmDialog open={open} title={`Xác nhận hủy Bàn ${snapshot?.tableId??''}`} busy={busy} error={error} confirmLabel={pending?'Thử lại cùng mã hủy bàn':'Xác nhận hủy cả bàn'} onConfirm={()=>void cancel()} onClose={()=>setOpen(false)}><p>Hủy toàn bộ món chưa thanh toán trong danh sách dưới đây. Báo bếp nếu đã chuẩn bị món.</p><ul>{snapshot?.items.map(i=><li key={i.id}>{i.qty} × {i.name} · {(i.price*i.qty).toLocaleString('vi-VN')}đ</li>)}</ul><p>Các món đã trả tiền và hóa đơn được giữ nguyên.</p></ConfirmDialog>
+ <ConfirmDialog open={open} title={`Xác nhận hủy ${placeLabel(snapshot?.tableId??0)}`} busy={busy} error={error} confirmLabel={pending?'Thử lại cùng mã hủy bàn':(snapshot?.tableId??0)<0?'Xác nhận hủy đơn':'Xác nhận hủy cả bàn'} onConfirm={()=>void cancel()} onClose={()=>setOpen(false)}><p>Hủy toàn bộ món chưa thanh toán trong danh sách dưới đây. Báo bếp nếu đã chuẩn bị món.</p><ul>{snapshot?.items.map(i=><li key={i.id}>{i.qty} × {i.name} · {(i.price*i.qty).toLocaleString('vi-VN')}đ</li>)}</ul><p>Các món đã trả tiền và hóa đơn được giữ nguyên.</p></ConfirmDialog>
  </section>;
 }

@@ -169,3 +169,15 @@ Trong Quản lý → Báo cáo doanh thu, chọn khoảng ngày và bấm Xem b�
 Tệp có tên theo khoảng ngày, tiếng Việt UTF-8 BOM, số tiền dạng số với đơn vị VND, thời gian cập nhật theo giờ Việt Nam. Mở bằng Excel hoặc nhập CSV vào Google Sheets. Khi tổng hợp tiếp, không cộng dòng Tổng cộng lần nữa vào các dòng ngày. Đây là dữ liệu của lần Xem báo cáo gần nhất; bấm Xem báo cáo lại để lấy giao dịch vừa phát sinh. Đổi khoảng ngày sẽ ẩn kết quả và nút xuất cho đến khi tải báo cáo mới. Báo cáo trống vẫn xuất được doanh thu tổng bằng 0.
 
 Không có migration mới. Dùng dữ liệu RPC báo cáo đã có, không gọi thêm RPC khi tải tệp và giữ quyền chủ/thu ngân. `npm run test:revenue-export` kiểm tra định dạng, dấu tiếng Việt, ký tự đặc biệt, số tiền và nội dung bắt đầu bằng công thức; `npm run test:revenue-ui` kiểm tra tải tệp thực tế trên Chromium với Supabase giả lập, khoảng ngày, dữ liệu trống/lỗi và phân quyền giao diện.
+
+## Đơn mang về
+
+Chạy `supabase/migrations/013_takeaway.sql` sau 012 trước khi triển khai giao diện mới. Trong Phục vụ chọn Mang về → Tạo đơn mang về, nhập tên khách/ghi chú tùy chọn (tối đa 120 ký tự), sau đó chọn món và Gửi bếp. Đơn có mã riêng, không xuất hiện trên sơ đồ bàn tại quán. Bếp thấy mã cùng tên/ghi chú đơn và ghi chú từng món; giữ FIFO, chuông và vuốt hoàn thành như trước.
+
+Thu ngân/chủ thanh toán và in hóa đơn có nhãn Mang về. Đơn trả hết hoặc hủy hết được đóng, bỏ khỏi danh sách đang mở; món đã trả mà bếp chưa làm xong vẫn ở bếp. Mã đã đóng không dùng cho đơn khách mới. Không có trạng thái giao/nhận hàng riêng trong phiên bản này. Đơn chưa có món đã gửi có nút Bỏ đơn mang về trống; phục vụ chỉ được bỏ đơn trống của mình, chủ/thu ngân được bỏ mọi đơn trống. Đơn đã có món dùng hủy món/hủy đơn theo quyền thu ngân/chủ. Tách/gộp bill trong cùng đơn vẫn dùng được; không chuyển/gộp giữa đơn mang về và bàn tại quán.
+
+Yêu cầu tạo đơn lưu mã vào localStorage theo tài khoản; mất phản hồi/reload thì Thử lại cùng mã tạo đơn. Không xóa bộ nhớ trình duyệt khi còn yêu cầu chờ. Không tự tạo lại đơn. Hệ thống ghi nhật ký tạo/bỏ đơn trống; thanh toán và món bán được tính trong báo cáo/CSV chung.
+
+Về dữ liệu, mỗi đơn mang về dùng một điểm nhận đơn riêng trong restaurant_tables với service_type=takeaway và ID âm, khác các bàn vật lý ID dương. Giữ cơ chế khóa/idempotency và RPC đơn/thanh toán hiện có; chỉ RPC tạo được điểm nhận đơn, các điểm đã đóng ngừng hoạt động. Snapshot nhãn lưu trên orders và bills, nên bếp và biên lai còn đúng tên sau khi đơn đóng. Không sửa hóa đơn trước nâng cấp.
+
+`test:takeaway` kiểm tra SQL/RLS, tạo lặp, đóng đơn, nhãn snapshot, thanh toán/hủy/bếp/báo cáo và chặn chuyển bàn. `test:takeaway-ui` kiểm tra Chromium với Supabase giả lập: tạo bị mất phản hồi rồi reload, gửi món/ghi chú, bếp, thanh toán thử lại, hóa đơn, bỏ đơn trống và hủy đơn; không tạo đơn thật. Chưa kiểm chứng nhiều phiên PostgreSQL đồng thời hoặc thiết bị cảm ứng thật.
