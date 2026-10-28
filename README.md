@@ -172,11 +172,11 @@ Không có migration mới. Dùng dữ liệu RPC báo cáo đã có, không g�
 
 ## Đơn mang về
 
-Chạy `supabase/migrations/013_takeaway.sql` sau 012 trước khi triển khai giao diện mới. Trong Phục vụ chọn Mang về → Tạo đơn mang về, nhập tên khách/ghi chú tùy chọn (tối đa 120 ký tự), sau đó chọn món và Gửi bếp. Đơn có mã riêng, không xuất hiện trên sơ đồ bàn tại quán. Bếp thấy mã cùng tên/ghi chú đơn và ghi chú từng món; giữ FIFO, chuông và vuốt hoàn thành như trước.
+Chạy `supabase/migrations/013_takeaway.sql` sau 012 trước khi triển khai giao diện mới. Trong Phục vụ chọn Mang về → ô Mang về trống, chọn món và Gửi bếp như gọi món tại bàn. Không còn nút/pop-up tạo đơn hay ô nhập tên khách; mã mang về được mở tự động khi chọn ô trống. Đơn có mã riêng, không xuất hiện trên sơ đồ bàn tại quán. Bếp thấy mã cùng tên/ghi chú đơn và ghi chú từng món; giữ FIFO, chuông và vuốt hoàn thành như trước.
 
 Thu ngân/chủ thanh toán và in hóa đơn có nhãn Mang về. Đơn trả hết hoặc hủy hết được đóng, bỏ khỏi danh sách đang mở; món đã trả mà bếp chưa làm xong vẫn ở bếp. Mã đã đóng không dùng cho đơn khách mới. Không có trạng thái giao/nhận hàng riêng trong phiên bản này. Đơn chưa có món đã gửi có nút Bỏ đơn mang về trống; phục vụ chỉ được bỏ đơn trống của mình, chủ/thu ngân được bỏ mọi đơn trống. Đơn đã có món dùng hủy món/hủy đơn theo quyền thu ngân/chủ. Tách/gộp bill trong cùng đơn vẫn dùng được; không chuyển/gộp giữa đơn mang về và bàn tại quán.
 
-Yêu cầu tạo đơn lưu mã vào localStorage theo tài khoản; mất phản hồi/reload thì Thử lại cùng mã tạo đơn. Không xóa bộ nhớ trình duyệt khi còn yêu cầu chờ. Không tự tạo lại đơn. Hệ thống ghi nhật ký tạo/bỏ đơn trống; thanh toán và món bán được tính trong báo cáo/CSV chung.
+Yêu cầu mở mang về lưu mã vào localStorage theo tài khoản; mất phản hồi/reload thì Thử lại cùng mã mở mang về. Không xóa bộ nhớ trình duyệt khi còn yêu cầu chờ. Không tự tạo lại đơn. Hệ thống ghi nhật ký tạo/bỏ đơn trống; thanh toán và món bán được tính trong báo cáo/CSV chung.
 
 Về dữ liệu, mỗi đơn mang về dùng một điểm nhận đơn riêng trong restaurant_tables với service_type=takeaway và ID âm, khác các bàn vật lý ID dương. Giữ cơ chế khóa/idempotency và RPC đơn/thanh toán hiện có; chỉ RPC tạo được điểm nhận đơn, các điểm đã đóng ngừng hoạt động. Snapshot nhãn lưu trên orders và bills, nên bếp và biên lai còn đúng tên sau khi đơn đóng. Không sửa hóa đơn trước nâng cấp.
 

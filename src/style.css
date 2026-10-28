@@ -11,6 +11,8 @@
 .table-order{position:relative}.table-actions-trigger{position:absolute;right:12px;top:12px;margin:0;width:40px;height:40px;padding:8px}.order-panel-heading{padding-right:62px}
 
 .report-export-actions{display:flex;flex-wrap:wrap;gap:8px}.report-export-actions button{display:flex;align-items:center;gap:8px}.report-export-actions .pos-icon{width:18px;height:18px}.report-export-hint{color:var(--muted);font-size:12px}
-.service-channels{display:flex;gap:8px;margin-bottom:12px}.takeaway-create{margin-bottom:12px;justify-items:start}.takeaway-create input{display:block;width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:6px}.takeaway-create~.service-layout{margin-top:12px}.table-card strong,.order-panel-heading h2,.selected-table-strip strong{overflow-wrap:anywhere}
+.service-channels{display:flex;gap:8px;margin-bottom:12px}.table-card strong,.order-panel-heading h2,.selected-table-strip strong{overflow-wrap:anywhere}
 
 .confirm-dialog label{display:grid;gap:8px;font-size:13px}.confirm-dialog input{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:6px}
+
+.takeaway-picker{width:min(230px,100%);margin-bottom:12px}.takeaway-picker .table-card{width:100%;text-align:left}.takeaway-picker p{margin:0}
