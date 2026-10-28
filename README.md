@@ -202,3 +202,11 @@ Thứ tự lưu trong database, áp dụng cho sơ đồ bàn Phục vụ sau đ
 Yêu cầu lưu thứ tự giữ mã và snapshot thứ tự cũ/mới trong localStorage theo tài khoản, để thử lại sau mất phản hồi/reload không áp dụng lần hai. Nếu thiết bị khác sắp xếp hoặc thêm bàn trước khi lưu, server từ chối snapshot cũ và yêu cầu tải lại. Chủ quán có quyền sắp xếp; không mở quyền ghi bảng trực tiếp. Ghi nhật ký một lần cho mỗi mã yêu cầu.
 
 `test:table-order` kiểm tra RPC/RLS, dữ liệu hợp lệ, retry, xung đột thứ tự/thêm bàn, bàn mới cuối danh sách, vị trí bàn ngừng/bật lại, giữ nguyên đơn/phiên/version và nhật ký. `test:table-order-ui` kiểm tra kéo chuột, cảm ứng thật qua Chromium touch input, phím mũi tên, hủy bản nháp, lưu/reload/thử lại, thứ tự Phục vụ và phân quyền. Database dùng PGlite; mạng Supabase giả lập; chưa kiểm thử trên điện thoại vật lý hoặc nhiều phiên PostgreSQL đồng thời.
+
+## Ẩn menu khi mở lại bàn đã gọi món
+
+Bàn chưa có đơn mở menu ngay. Với bàn đã có đơn, khi chọn lại bàn sẽ thấy nút + Thêm món thay cho menu; bấm nút để mở menu gọi thêm. Các món đã lưu, thao tác bàn và thanh toán vẫn hiển thị. Sau khi gửi món thành công, menu tự thu gọn lại.
+
+Nếu bàn còn món đang chọn chưa gửi hoặc có yêu cầu gửi chờ xác nhận, giữ menu mở để kiểm tra món/ghi chú và thử lại; không ẩn giỏ dở khi đổi màn hình hoặc chọn lại bàn. Khi bàn đã thanh toán/hủy hết và trở lại trống, menu mở bình thường cho khách tiếp theo. Không có migration mới.
+
+`test:ordered-table-menu` kiểm tra bàn trống/đã gọi, nút +, gửi xong thu gọn, mở lại, giữ giỏ/ghi chú, mất phản hồi/reload/thử lại và bàn trở lại trống bằng Chromium với Supabase giả lập.
