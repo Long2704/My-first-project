@@ -191,3 +191,14 @@ Bàn đang có phiên khách hoặc liên quan đến đơn bếp còn làm khô
 App lưu mã cập nhật bàn theo tài khoản trước khi gửi; mất phản hồi hoặc tải lại thì Thử lại cùng mã cập nhật bàn, tránh thêm bàn trùng. Khi có cập nhật chờ, xử lý từ Mở quản lý bàn; không xóa dữ liệu trình duyệt. Nếu bản sửa ở thiết bị khác đã mới hơn, tải lại và kiểm tra trước khi lưu yêu cầu mới. Các thiết bị phục vụ khác nhận danh sách sau lần đồng bộ tiếp theo.
 
 `test:table-management` kiểm tra nâng cấp trực tiếp sau 013 còn check 1..12 và sau 014, quyền/RLS, tạo ID14, retry, tên trùng, version cũ, bàn có khách/món bếp chưa xong, ngừng/bật lại, snapshot hóa đơn và nhật ký. `test:table-management-ui` kiểm tra menu chủ quán, retry sau reload, cập nhật sơ đồ, đổi tên/ngừng/bật lại, xung đột và giao diện mobile. SQL dùng PGlite, Chromium dùng Supabase giả lập; chưa kiểm chứng nhiều phiên PostgreSQL đồng thời.
+
+
+## Kéo thả thứ tự bàn
+
+Chạy `supabase/migrations/016_table_order.sql` sau 015 trước khi triển khai. Trong Quản lý → Quản lý bàn, kéo nút ⠿ của một bàn đến vị trí mong muốn rồi bấm Lưu thứ tự bàn. Dùng được với chuột và cảm ứng; trên bàn phím, đặt tiêu điểm vào nút kéo và dùng ↑ / ↓. Hủy sắp xếp để tải lại thứ tự đã lưu. Phần kéo chỉ bắt cử chỉ trên nút ⠿, vẫn cuộn danh sách bình thường ở phần tên bàn.
+
+Thứ tự lưu trong database, áp dụng cho sơ đồ bàn Phục vụ sau đồng bộ và cho các thiết bị khác. Bàn mới được thêm cuối danh sách; bàn ngừng sử dụng vẫn giữ vị trí khi bật lại. Có thể sắp xếp bàn đang có khách vì chỉ đổi hiển thị, không đổi vị trí khách hay món. Trước khi bấm lưu, thay đổi chỉ là bản xem trước trong trang; tải lại trình duyệt sẽ bỏ bản chưa lưu.
+
+Yêu cầu lưu thứ tự giữ mã và snapshot thứ tự cũ/mới trong localStorage theo tài khoản, để thử lại sau mất phản hồi/reload không áp dụng lần hai. Nếu thiết bị khác sắp xếp hoặc thêm bàn trước khi lưu, server từ chối snapshot cũ và yêu cầu tải lại. Chủ quán có quyền sắp xếp; không mở quyền ghi bảng trực tiếp. Ghi nhật ký một lần cho mỗi mã yêu cầu.
+
+`test:table-order` kiểm tra RPC/RLS, dữ liệu hợp lệ, retry, xung đột thứ tự/thêm bàn, bàn mới cuối danh sách, vị trí bàn ngừng/bật lại, giữ nguyên đơn/phiên/version và nhật ký. `test:table-order-ui` kiểm tra kéo chuột, cảm ứng thật qua Chromium touch input, phím mũi tên, hủy bản nháp, lưu/reload/thử lại, thứ tự Phục vụ và phân quyền. Database dùng PGlite; mạng Supabase giả lập; chưa kiểm thử trên điện thoại vật lý hoặc nhiều phiên PostgreSQL đồng thời.
