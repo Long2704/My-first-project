@@ -1,5 +1,6 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
 try{
 const context=await browser.newContext({viewport:{width:390,height:844}});
@@ -53,13 +54,19 @@ await page.getByLabel('Từ ngày',{exact:true}).fill('2026-10-27');await page.g
 const load=page.getByRole('button',{name:'Xem báo cáo',exact:true});await load.click();
 await page.getByText('210.000đ',{exact:true}).first().waitFor();assert.equal(reportCalls.length,1);assert.equal(reportCalls[0].p_from,'2026-10-27');
 assert.match(await page.locator('.report-result').innerText(),/110\.000đ/);assert.match(await page.locator('.report-result').innerText(),/Bún riêu/);
-await page.getByLabel('Đến ngày',{exact:true}).fill('2026-10-28');await page.getByText('Khoảng ngày đã đổi.',{exact:false}).waitFor();assert.equal(await page.locator('.report-result').count(),0);
+const exportDaily=page.getByRole('button',{name:'Xuất doanh thu CSV',exact:true}),exportProducts=page.getByRole('button',{name:'Xuất 20 món CSV',exact:true});
+let downloadPromise=page.waitForEvent('download');await exportDaily.click();let download=await downloadPromise;
+assert.equal(download.suggestedFilename(),'goc-pho-doanh-thu_2026-10-27_2026-10-27.csv');
+const data=readFileSync(await download.path());assert.deepEqual([...data.subarray(0,3)],[239,187,191]);const contents=data.toString('utf8');assert.match(contents,/"232000","22000","210000","100000","110000"/);assert.match(contents,/Tổng cộng/);
+downloadPromise=page.waitForEvent('download');await exportProducts.click();download=await downloadPromise;assert.match(download.suggestedFilename(),/top-20-mon_2026-10-27_2026-10-27/);const productData=readFileSync(await download.path(),'utf8');assert.match(productData,/Bún riêu/);assert.match(productData,/"4","232000"/);assert.equal(reportCalls.length,1);
+await page.getByLabel('Đến ngày',{exact:true}).fill('2026-10-28');await page.getByText('Khoảng ngày đã đổi.',{exact:false}).waitFor();assert.equal(await page.locator('.report-result').count(),0);assert.equal(await exportDaily.count(),0);
 reportMode='empty';await load.click();await page.getByText('Chưa có hóa đơn đã thanh toán trong khoảng ngày này.',{exact:true}).waitFor();
-reportMode='missing';await load.click();await page.getByText('Database chưa có báo cáo doanh thu.',{exact:false}).waitFor();assert.equal(await page.locator('.report-result').count(),0);
+assert.equal(await exportProducts.isDisabled(),true);downloadPromise=page.waitForEvent('download');await exportDaily.click();download=await downloadPromise;assert.match(readFileSync(await download.path(),'utf8'),/"Tổng cộng","","0","0","0","0","0","0"/);
+reportMode='missing';await load.click();await page.getByText('Database chưa có báo cáo doanh thu.',{exact:false}).waitFor();assert.equal(await page.locator('.report-result').count(),0);assert.equal(await exportDaily.count(),0);
 reportMode='fail';await load.click();await page.getByText('Không tải được báo cáo.',{exact:false}).waitFor();
 await page.getByLabel('Từ ngày',{exact:true}).fill('2026-11-01');assert.equal(await load.isDisabled(),true);
 reportMode='ok';await page.getByRole('button',{name:'Tháng này',exact:true}).click();assert.match(await page.getByLabel('Từ ngày',{exact:true}).inputValue(),/-01$/);assert.equal(await load.isDisabled(),false);
 await load.click();await page.locator('.report-result').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Báo cáo doanh thu',exact:true}).count(),0);
-assert.deepEqual(errors,[]);console.log('PASS: revenue dates, totals, daily/products, stale result hiding, empty/error/missing migration, date validation, month shortcut, mobile width and service role. Mock Supabase only.');
+role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Báo cáo doanh thu',exact:true}).count(),0);assert.equal(await exportDaily.count(),0);
+assert.deepEqual(errors,[]);console.log('PASS: CSV downloads/BOM/amounts/range filenames, no extra RPC, empty export, stale/error/role export protection, revenue dates, totals, daily/products, stale result hiding, empty/error/missing migration, date validation, month shortcut, mobile width and service role. Mock Supabase only.');
 }finally{await browser.close();}
