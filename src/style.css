@@ -14,3 +14,5 @@
 .table-card strong,.order-panel-heading h2,.selected-table-strip strong{overflow-wrap:anywhere}
 
 .confirm-dialog label{display:grid;gap:8px;font-size:13px}.confirm-dialog input{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:6px}
+
+.table-edit-form{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:12px}.table-edit-form fieldset{display:grid;gap:12px;border:0;padding:0}.table-edit-form label:not(.checkbox-label){display:grid;gap:8px}.table-edit-form input:not([type=checkbox]){padding:10px;border:1px solid var(--line);border-radius:6px;width:100%;min-width:0}.table-management>.primary{justify-self:start}
