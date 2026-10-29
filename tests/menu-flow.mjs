@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -12,7 +13,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu.filter(m=>m.is_active);
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -86,6 +87,6 @@ await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 // Menu thay đổi ở thiết bị khác: đồng bộ phải khóa giỏ chứa món hết.
 await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await openOrderMenu();await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();menu[0].is_out=true;await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.getByText('Có món đang chọn đã hết hoặc ngừng bán.',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Gửi bếp',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-role='thu_ngan';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
+role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
 assert.deepEqual(errors,[]);console.log('PASS: menu create/edit validation, durable retry/reload, price/out/stopped/reactivate, stale update rejection, preserved saved order, stale price rejection/recovery, live menu sync, mobile and owner-only controls. Mock Supabase only.');
 }finally{await browser.close();}
