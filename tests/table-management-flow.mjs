@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -10,7 +11,7 @@ try{
   const req=route.request(),u=new URL(req.url());let body;
   if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
   else if(u.pathname==='/auth/v1/user')body={id:'test-user',email:'test@example.com'};
-  else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán',role};
+  else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán',role});
   else if(u.pathname==='/rest/v1/menu_items')body=menu;
   else if(u.pathname==='/rest/v1/restaurant_tables')body=tables.filter(t=>t.active);
   else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -57,6 +58,6 @@ try{
  await management();await page.getByRole('button',{name:'Sửa Sân sau',exact:true}).click();await page.getByLabel('Đang sử dụng',{exact:true}).check();await page.getByRole('button',{name:'Lưu bàn',exact:true}).click();await page.getByText('Đã lưu Sân sau. Danh sách bàn phục vụ đã cập nhật.',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Sửa Sân sau',exact:true}).click();tables.find(t=>t.name==='Sân sau').version++;await page.getByLabel('Tên bàn',{exact:true}).fill('Tên cũ');await page.getByRole('button',{name:'Lưu bàn',exact:true}).click();await page.getByRole('alert').filter({hasText:'Bàn đã được sửa ở nơi khác.'}).waitFor();assert.equal(await page.getByRole('button',{name:'Thử lại cùng mã cập nhật bàn',exact:true}).count(),0);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'/workspace/work/table-management-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'/workspace/work/table-management-desktop.png',fullPage:true});
- role='thu_ngan';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();const nav=page.locator('.management-menu');await nav.locator('summary').click();assert.equal(await page.getByRole('button',{name:'Quản lý bàn',exact:true}).count(),0);assert.deepEqual(errors,[]);
- console.log('PASS: owner management menu, busy-table disabled, add lost response/reload same-request retry, no duplicate, immediate service refresh, rename/deactivate/reactivate, stale edit rejection, mobile width and cashier has no table management. Mock Supabase only.');
+ role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý bàn',exact:true}).count(),0);assert.deepEqual(errors,[]);
+ console.log('PASS: owner management menu, busy-table disabled, add lost response/reload same-request retry, no duplicate, immediate service refresh, rename/deactivate/reactivate, stale edit rejection, mobile width and waiter has no table management. Mock Supabase only.');
 }finally{await browser.close();}
