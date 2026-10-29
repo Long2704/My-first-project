@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -10,7 +11,7 @@ try{
   const req=route.request(),u=new URL(req.url());let body;
   if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
   else if(u.pathname==='/auth/v1/user')body={id:'test-user',email:'test@example.com'};
-  else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán',role};
+  else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán',role});
   else if(u.pathname==='/rest/v1/menu_items')body=menu;
   else if(u.pathname==='/rest/v1/restaurant_tables'){assert.match(u.searchParams.get('order'),/display_order/);body=tables.filter(t=>t.active);}
   else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -68,6 +69,6 @@ try{
  await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).click();await page.getByRole('button',{name:'Thử lại cùng mã sắp xếp',exact:true}).waitFor();await page.reload();await page.getByRole('button',{name:'Mở quản lý bàn',exact:true}).click();await page.getByRole('button',{name:'Thử lại cùng mã sắp xếp',exact:true}).click();await page.getByText('Đã lưu thứ tự bàn. Màn hình Phục vụ đã cập nhật.',{exact:true}).waitFor();assert.deepEqual(orderCalls[0],orderCalls[1]);assert.equal(ordered.size,1);
  await page.getByRole('button',{name:'Phục vụ',exact:true}).click();assert.match(await page.locator('.table-card:visible').first().innerText(),/^Bàn 2/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await management();await page.screenshot({path:'/workspace/work/table-order-mobile.png',fullPage:true});await mouseDrag(2,3);tables.reverse();await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).click();await page.getByRole('alert').filter({hasText:'Danh sách hoặc thứ tự bàn đã thay đổi.'}).waitFor();assert.equal(await page.getByRole('button',{name:'Thử lại cùng mã sắp xếp',exact:true}).count(),0);assert.deepEqual(await ids(),tables.map(t=>t.id));
- role='thu_ngan';await page.reload();await page.getByRole('button',{name:/^Bàn /}).first().waitFor();await page.locator('.management-menu>summary').click();assert.equal(await page.getByRole('button',{name:'Quản lý bàn',exact:true}).count(),0);assert.deepEqual(errors,[]);
+ role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn /}).first().waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý bàn',exact:true}).count(),0);assert.deepEqual(errors,[]);
  console.log('PASS: mouse drag including busy table, cancel draft, keyboard reorder, real touch drag, explicit save, lost response/reload same-ID retry, service order query/display, stale order conflict, mobile and owner-only controls. Mock Supabase only.');
 }finally{await browser.close();}
