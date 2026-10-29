@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -11,7 +12,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu;
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -76,7 +77,7 @@ await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
 await management('Hóa đơn gần đây');await page.getByRole('button',{name:/^#1 /}).click();await page.getByRole('button',{name:'In hóa đơn',exact:true}).waitFor();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
-role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 3 /}).click();assert.equal(await page.getByRole('button',{name:'Thanh toán Bàn 3',exact:true}).count(),0);
+role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 3 /}).click();assert.equal(await page.getByRole('button',{name:'Thanh toán Bàn 3',exact:true}).count(),1);
 assert.deepEqual(errors,[]);
-console.log('PASS: cash validation, percentage/fixed discounts, change, persisted retry after lost payment response, no duplicate invoice, transfer, receipt-only retry, stale-item rejection, kitchen retains paid orders, empty table, recent receipts, print CSS, mobile width, service hides payment. All network mocked; no live payments.');
+console.log('PASS: cash validation, percentage/fixed discounts, change, persisted retry after lost payment response, no duplicate invoice, transfer, receipt-only retry, stale-item rejection, kitchen retains paid orders, empty table, recent receipts, print CSS, mobile width, service can pay without finance administration. All network mocked; no live payments.');
 }finally{await browser.close();}
