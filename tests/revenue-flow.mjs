@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -12,7 +13,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu;
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
