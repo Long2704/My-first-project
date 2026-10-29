@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -11,7 +12,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu;
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -82,6 +83,6 @@ assert.equal(await page.getByRole('button',{name:'Thử lại cùng mã chuyển
 assert.equal(await page.evaluate(()=>localStorage.getItem('goc-pho-transfer-v1:payment-test-user')),null);
 await management('Nhật ký hoạt động');await page.getByText('Bàn 1 → Bàn 4',{exact:true}).waitFor();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 4 /}).click();assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 4',exact:true}).count(),0);
+role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 4 /}).click();assert.equal(await page.getByRole('button',{name:'Thao tác bàn',exact:true}).count(),1);
 assert.deepEqual(errors,[]);console.log('PASS: transfer without reason, draft blocking, occupied targets selectable, durable retry/reload, moved totals/kitchen, target conflict rejection, audit, mobile and service role. Mock Supabase only.');
 }finally{await browser.close();}
