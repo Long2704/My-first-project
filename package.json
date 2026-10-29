@@ -33,7 +33,11 @@
     "test:takeaway": "node tests/fixed-takeaway-sql.mjs",
     "test:table-merge": "node tests/table-merge-sql.mjs",
     "test:table-cancel": "node tests/table-cancel-sql.mjs",
-    "test:table-workflows": "node tests/table-workflows-flow.mjs"
+    "test:table-workflows": "node tests/table-workflows-flow.mjs",
+    "test:permissions": "node tests/central-permissions-sql.mjs",
+    "test:payment-permissions": "node tests/payment-permissions-sql.mjs",
+    "test:kitchen-access": "node tests/kitchen-access-sql.mjs",
+    "test:kitchen-access-ui": "node tests/kitchen-access-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
