@@ -19,12 +19,19 @@ import TableActions from './TableActions';
 import SwipeOrderCard from './SwipeOrderCard';
 import {CancelItem,AuditPanel} from './OperationsPanel';
 const groups=[{id:'bun',name:'Món chính'},{id:'an_them',name:'Món thêm'},{id:'do_uong',name:'Nước giải khát'}];
-const roles:Record<string,string>={chu:'Chủ quán',thu_ngan:'Thu ngân',phuc_vu:'Phục vụ',bep:'Bếp'};
+const roles:Record<string,string>={chu:'Chủ quán',phuc_vu:'Phục vụ',bep:'Bếp'};
 const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
 type View='tables'|'service'|'kitchen'|'menu'|'revenue'|'audit'|'invoices';
 type Item={id:string;name:string;price:number;category:string;is_out:boolean};
 type DiningTable={id:number;name:string};
-type Profile={name:string;role:string};
+type Profile={name:string;role:string;is_active:boolean;permissions:string[]};
+const permitted=(profile:Profile|null,permission:string)=>!!profile?.is_active&&profile.permissions.includes(permission);
+function checkedAccess(data:unknown):Profile{
+ const p=data as Partial<Profile>|null;
+ if(!p||typeof p.name!=='string'||typeof p.role!=='string'||!roles[p.role]||!Array.isArray(p.permissions)||p.permissions.some(v=>typeof v!=='string'))throw new Error('Tài khoản chưa được cấp vai trò hợp lệ.');
+ if(p.is_active!==true)throw new Error('Tài khoản đã bị khóa. Liên hệ Chủ quán để được hỗ trợ.');
+ return p as Profile;
+}
 type Pending={requestId:string;tableId:number;items:{menu_item_id:string;qty:number;note:string;expected_price?:number}[]};
 type KitchenOrder=Order&{table_sessions:{table_id:number;closed_at:string|null;table_path?:number[]}};
 const orderFields='service_label,table_path,id,request_id,session_id,status,kitchen_relevant,created_at,order_items(id,name,price,qty,category,note,paid,bill_no,cancelled_at,cancel_reason)';
@@ -39,7 +46,11 @@ function App(){
  const [tableSearch,setTableSearch]=useState(''),[tableFilter,setTableFilter]=useState<'all'|'empty'|'busy'>('all'),[menuSearch,setMenuSearch]=useState('');
  const [receiptRequest,setReceiptRequest]=useState<{id:string;key:number}|null>(null);
  const managementNav=useRef<HTMLDetailsElement>(null);
- function navigate(next:View){setView(next);managementNav.current?.removeAttribute('open');}
+ function navigate(next:View){
+  const permission:Record<View,string>={service:'orders.read',kitchen:'orders.read',tables:'tables.manage',menu:'menu.manage',revenue:'reports.read',audit:'audit.read',invoices:'receipts.read_own'};
+  if(!permitted(profile,permission[next]))return;
+  setView(next);managementNav.current?.removeAttribute('open');
+ }
  const [menuExpandedFor,setMenuExpandedFor]=useState<number|null>(null);
  const [selected,setSelected]=useState<DiningTable|null>(null),[group,setGroup]=useState('bun');
  const [drafts,setDrafts]=useState<Record<number,Record<string,number>>>({}),[notes,setNotes]=useState<Record<number,Record<string,string>>>({});
@@ -68,12 +79,12 @@ function App(){
   }catch{setError('Không đọc được đơn chờ gửi trên thiết bị. Không xóa dữ liệu trình duyệt; liên hệ hỗ trợ trước khi gửi lại đơn.');}
   async function load(){
    try{
-    const p=await supabase!.from('profiles').select('name,role').eq('id',user).maybeSingle();
-    if(p.error)throw new Error('Không đọc được hồ sơ nhân viên.');
-    if(!p.data||!roles[p.data.role])throw new Error('Tài khoản chưa được cấp vai trò hợp lệ.');
+    const p=await supabase!.rpc('get_my_access');
+    if(p.error)throw new Error('Không đọc được quyền nhân viên. Kiểm tra migration 023 và kết nối.');
+    const access=checkedAccess(p.data);
     const [m,t]=await Promise.all([supabase!.from('menu_items').select('id,name,price,category,is_out').eq('is_active',true).order('sort').order('id'),supabase!.from('restaurant_tables').select('id,name').eq('is_active',true).order('display_order').order('id')]);
     if(m.error||t.error)throw new Error('Không tải được thực đơn hoặc danh sách bàn.');
-    if(active){setProfile(p.data);setMenu(m.data??[]);setTables(t.data??[]);setView(p.data.role==='bep'?'kitchen':'service');}
+    if(active){setProfile(access);setMenu(m.data??[]);setTables(t.data??[]);setView(access.role==='bep'?'kitchen':'service');}
    }catch(e){if(active)setError(e instanceof Error?e.message:'Không thể tải dữ liệu.');}finally{if(active)setLoading(false);}
   }
   void load();return()=>{active=false;};
@@ -82,6 +93,20 @@ function App(){
   if(!supabase||!profile||!session||refreshLock.current)return;
   const user=session.user.id;refreshLock.current=true;
   try{
+   const accessResult=await supabase.rpc('get_my_access');
+   if(identity.current!==user)return;
+   if(accessResult.error)throw new Error();
+   let access:Profile;
+   try{access=checkedAccess(accessResult.data);}catch(e){
+    setProfile(null);setMenu([]);setTables([]);setSessions([]);setCooking([]);setSelected(null);setReceiptRequest(null);setLastSync('');
+    setError(e instanceof Error?e.message:'Không xác nhận được quyền tài khoản.');
+    return;
+   }
+   setProfile(prev=>JSON.stringify(prev)===JSON.stringify(access)?prev:access);
+   setView(current=>{
+    const permissions:Record<View,string>={service:'orders.read',kitchen:'orders.read',tables:'tables.manage',menu:'menu.manage',revenue:'reports.read',audit:'audit.read',invoices:'receipts.read_own'};
+    return permitted(access,permissions[current])?current:access.role==='bep'?'kitchen':'service';
+   });
    const [s,k,m,t]=await Promise.all([
     supabase.from('table_sessions').select(`id,table_id,table_path,orders(${orderFields})`).is('closed_at',null),
     supabase.from('orders').select(`${orderFields},table_sessions!inner(table_id,closed_at,table_path)`).eq('status','cooking').eq('kitchen_relevant',true).order('created_at').order('id'),
@@ -104,7 +129,7 @@ function App(){
   e.preventDefault();if(!supabase)return;setBusy(true);setError('');
   try{const r=await supabase.auth.signInWithPassword({email:email.trim(),password});if(r.error)setError('Đăng nhập thất bại. Kiểm tra email, mật khẩu và kết nối.');else setPassword('');}catch{setError('Không kết nối được Supabase.');}finally{setBusy(false);}
  }
- async function logout(){if(!supabase||sending||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy)return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
+ async function logout(){if(!supabase||(profile&&(sending||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy)))return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
  const qty=selected?drafts[selected.id]??{}:{};
  const total=menu.reduce((s,m)=>s+m.price*(qty[m.id]||0),0);
  const count=Object.values(qty).reduce((a,b)=>a+b,0);
@@ -112,7 +137,7 @@ function App(){
  const locked=!!pending||sending||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy;
  function changeQty(id:string,delta:number){if(!selected||locked)return;const table=selected.id;setDrafts(d=>({...d,[table]:{...d[table],[id]:Math.min(99,Math.max(0,(d[table]?.[id]||0)+delta))}}));}
  async function sendOrder(){
-  if(!session||!supabase||sendLock.current||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy||!profile||profile.role==='bep')return;
+  if(!session||!supabase||sendLock.current||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy||!permitted(profile,'orders.create'))return;
   const user=session.user.id;
   let payload=pending;
   if(!payload){
@@ -146,16 +171,21 @@ function App(){
   finally{sendLock.current=false;setSending(false);}
  }
  async function complete(id:string){
-  if(!supabase||completing||cancelTablePending||itemCancelBusy)return;setCompleting(id);setError('');
+  if(!supabase||!permitted(profile,'kitchen.complete')||completing||cancelTablePending||itemCancelBusy)return;setCompleting(id);setError('');
   try{const r=await supabase.rpc('complete_kitchen_order',{p_order_id:id});if(r.error)throw new Error(r.error.message);await refresh();}
   catch(e){setError(`Chưa hoàn thành đơn: ${e instanceof Error?e.message:'Lỗi kết nối'}. Có thể thử lại an toàn.`);}finally{setCompleting(null);}
  }
  const historyOrders=fifo(sessions.flatMap(s=>s.orders.filter(o=>o.status==='done'&&o.kitchen_relevant).map(o=>({...o,table_sessions:{table_id:s.table_id,closed_at:null,table_path:s.table_path}}))));
  const kitchen=history?historyOrders:fifo(cooking);
- const canComplete=profile&&['bep','chu','thu_ngan'].includes(profile.role);
+ const canComplete=permitted(profile,'kitchen.complete');
  const currentOrders=selected?fifo(sessions.filter(s=>s.table_id===selected.id).flatMap(s=>s.orders)):[];
  const showTableMenu=!!selected&&(!currentOrders.length||menuExpandedFor===selected.id||count>0||pending?.tableId===selected.id);
- const canCashier=!!profile&&['chu','thu_ngan'].includes(profile.role);
+ const canPay=permitted(profile,'payments.collect');
+ const canDiscount=permitted(profile,'payments.discount');
+ const canTransfer=permitted(profile,'tables.transfer'),canSplit=permitted(profile,'bills.split');
+ const canCancel=permitted(profile,'orders.cancel');
+ const canReadInvoices=permitted(profile,'receipts.read_own');
+ const canManage=permitted(profile,'menu.manage')||permitted(profile,'tables.manage')||permitted(profile,'reports.read')||permitted(profile,'audit.read');
  const placeName=(id:number)=>tables.find(t=>t.id===id)?.name??placeLabel(id);
  const dineTables=tables.filter(t=>t.id>0);
  const channelTables=tables;
@@ -164,9 +194,9 @@ function App(){
  const visibleTables=channelTables.filter(t=>t.name.toLocaleLowerCase('vi-VN').includes(tableSearch.trim().toLocaleLowerCase('vi-VN'))&&(tableFilter==='all'||(tableFilter==='busy')===sessions.some(s=>s.table_id===t.id)));
  const titles:Record<View,string>={service:selected?(showTableMenu?'Gọi món':'Đơn đã gọi'):'Sơ đồ bàn',kitchen:'Khu vực bếp',tables:'Quản lý bàn',menu:'Quản lý thực đơn',revenue:'Báo cáo doanh thu',audit:'Nhật ký hoạt động',invoices:'Hóa đơn gần đây'};
  return <div className="pos-app"><header className="app-header"><a className="brand" href="#" onClick={e=>{e.preventDefault();if(profile)navigate(profile.role==='bep'?'kitchen':'service');}}><span className="brand-mark">GP</span><span><strong>Bún Riêu Góc Phố</strong><small>QUẢN LÝ BÁN HÀNG</small></span></a>
- {session&&<div className="account"><span className="account-name">{profile?.name??'Nhân viên'}<small>{profile?roles[profile.role]:''}</small></span><button className="logout-button" disabled={busy||locked} onClick={logout}>Đăng xuất</button></div>}</header>
- {profile&&!loading&&<div className="app-navigation"><nav aria-label="Chức năng">{profile.role!=='bep'&&<button aria-pressed={view==='service'} onClick={()=>navigate('service')}><PosIcon name="tables"/>Phục vụ</button>}<button aria-pressed={view==='kitchen'} onClick={()=>navigate('kitchen')}><PosIcon name="kitchen"/>Bếp ({cooking.length})</button>
- {canCashier&&<details ref={managementNav} data-active={view!=='service'&&view!=='kitchen'} className="management-menu"><summary><PosIcon name="menu"/>Quản lý<PosIcon name="chevron"/></summary><div className="management-dropdown"><small>QUẢN LÝ QUÁN</small>{profile.role==='chu'&&<><button onClick={()=>navigate('menu')}><PosIcon name="menu"/>Quản lý thực đơn</button><button onClick={()=>navigate('tables')}><PosIcon name="tables"/>Quản lý bàn</button></>}<button onClick={()=>navigate('revenue')}><PosIcon name="report"/>Báo cáo doanh thu</button><button onClick={()=>navigate('audit')}><PosIcon name="audit"/>Nhật ký hoạt động</button><button onClick={()=>navigate('invoices')}><PosIcon name="invoice"/>Hóa đơn gần đây</button></div></details>}
+ {session&&<div className="account"><span className="account-name">{profile?.name??'Nhân viên'}<small>{profile?roles[profile.role]:''}</small></span><button className="logout-button" disabled={busy||!!profile&&locked} onClick={logout}>Đăng xuất</button></div>}</header>
+ {profile&&!loading&&<div className="app-navigation"><nav aria-label="Chức năng">{permitted(profile,'orders.read')&&<button aria-pressed={view==='service'} onClick={()=>navigate('service')}><PosIcon name="tables"/>Phục vụ</button>}<button aria-pressed={view==='kitchen'} onClick={()=>navigate('kitchen')}><PosIcon name="kitchen"/>Bếp ({cooking.length})</button>
+ {!canManage&&canReadInvoices&&<button aria-pressed={view==='invoices'} onClick={()=>navigate('invoices')}><PosIcon name="invoice"/>Hóa đơn của tôi</button>}{canManage&&<details ref={managementNav} data-active={view!=='service'&&view!=='kitchen'} className="management-menu"><summary><PosIcon name="menu"/>Quản lý<PosIcon name="chevron"/></summary><div className="management-dropdown"><small>QUẢN LÝ QUÁN</small>{permitted(profile,'menu.manage')&&<><button onClick={()=>navigate('menu')}><PosIcon name="menu"/>Quản lý thực đơn</button><button onClick={()=>navigate('tables')}><PosIcon name="tables"/>Quản lý bàn</button></>}<button onClick={()=>navigate('revenue')}><PosIcon name="report"/>Báo cáo doanh thu</button><button onClick={()=>navigate('audit')}><PosIcon name="audit"/>Nhật ký hoạt động</button><button onClick={()=>navigate('invoices')}><PosIcon name="invoice"/>Hóa đơn gần đây</button></div></details>}
  </nav><div className="sync-tools"><span className={syncError?'connection-status offline':'connection-status'}>{syncError?'Chưa đồng bộ':lastSync?'Đã kết nối':'Đang kết nối'}</span><button aria-label="Đồng bộ" title="Đồng bộ dữ liệu" onClick={()=>void refresh()}><PosIcon name="refresh"/><span>Đồng bộ</span></button></div></div>}
  <main className="app-main">
  {error&&<aside className="notice error-notice" role="alert">{error}{!profile&&session&&<p><button onClick={()=>setReload(n=>n+1)}>Thử tải lại</button></p>}</aside>}
@@ -199,20 +229,22 @@ function App(){
  <aside className="table-order" aria-label="Đơn của bàn">
  <div className="order-panel-heading"><span className="order-panel-icon"><PosIcon name="invoice"/></span><div><h2>{selected?selected.name:'Thông tin bàn'}</h2><small>{selected?'Theo dõi đơn và thanh toán':'Chọn bàn để bắt đầu phục vụ'}</small></div>{selected&&!showTableMenu&&<button className="add-more-items" aria-label="Thêm món" title="Thêm món" aria-expanded={false} aria-controls="table-menu" onClick={()=>{setMenuExpandedFor(selected!.id);setGroup('bun');setMenuSearch('');}}><span aria-hidden="true">+</span></button>}</div>
  {!selected&&!transferPending&&!billPending&&!cancelTablePending&&!paymentPending&&<div className="table-placeholder"><PosIcon name="tables"/><h3>Chọn một bàn</h3><p>Gọi món, theo dõi đơn và thanh toán ngay tại đây.</p><dl><div><dt>Bàn trống</dt><dd>{channelTables.length-occupied}</dd></div><div><dt>Đang phục vụ</dt><dd>{occupied}</dd></div><div><dt>Chưa thanh toán</dt><dd>{money(unpaidTotal)}</dd></div></dl></div>}
- {selected&&<><h3 className="saved-order-title">Đơn đã lưu · {money(savedTotal(sessions,selected.id))}</h3><div className="saved-orders">{currentOrders.length?currentOrders.map(o=><article className="saved-order" key={o.id}><div><div className="order-heading"><h2>Đợt {new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</h2><span className="order-status">{o.status==='cooking'?'Đang làm':'Đã ra món'}</span></div><ul>{o.order_items.map(i=><li className={i.cancelled_at?'cancelled-line':''} key={i.id}><div className="saved-line-heading"><strong>{i.qty} × {i.name}</strong><span>{money(i.price*i.qty)}</span></div><small>Bill {i.bill_no??1}</small>{i.note&&<p className="item-note">{i.note}</p>}{canCashier?<CancelItem compact onBusy={setItemCancelBusy} item={i} disabled={locked||!!syncError||!lastSync} onChanged={refresh}/>:i.cancelled_at&&<p>Đã hủy · {i.cancel_reason}</p>}</li>)}</ul></div></article>):<div className="empty-orders"><p>{selected.id<0?'Đơn chưa có món đã gửi.':'Bàn chưa có món đã lưu.'}</p><small>Chọn món bên trái rồi bấm Gửi bếp.</small></div>}</div></>}
- <TableActions label={selected&&selected.id<0?'Thao tác đơn':'Thao tác bàn'} key={`table-actions:${session!.user.id}`} visible={canCashier&&!!((selected&&currentOrders.length)||transferPending||billPending||cancelTablePending)} active={view==='service'} pending={transferPending||billPending||cancelTablePending} title={selected?.name??'Yêu cầu chờ'}>
- {canCashier&&<TransferPanel key={`transfer:${session!.user.id}`} userId={session!.user.id} table={selected&&selected.id>0?selected:null} tables={dineTables} sessions={sessions} disabled={cancelTablePending||itemCancelBusy||billPending||tablePending||menuPending||paymentPending||!!pending||sending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTransferPending} onTransferred={async id=>{await refresh();setSelected(tables.find(t=>t.id===id)??null);}}/>}
- {canCashier&&<BillPanel key={`bill-move:${session!.user.id}`} userId={session!.user.id} table={selected} sessions={sessions} disabled={cancelTablePending||itemCancelBusy||tablePending||menuPending||paymentPending||transferPending||sending||!!pending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setBillPending} onChanged={async id=>{await refresh();if(id)setSelected(tables.find(t=>t.id===id)??null);}}/>}
- {canCashier&&<CancelTablePanel key={`cancel-table:${session!.user.id}`} userId={session!.user.id} table={selected} sessions={sessions} disabled={itemCancelBusy||tablePending||menuPending||paymentPending||transferPending||billPending||sending||!!pending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setCancelTablePending} onChanged={refresh} onMessage={setMessage}/>}
+ {selected&&<><h3 className="saved-order-title">Đơn đã lưu · {money(savedTotal(sessions,selected.id))}</h3><div className="saved-orders">{currentOrders.length?currentOrders.map(o=><article className="saved-order" key={o.id}><div><div className="order-heading"><h2>Đợt {new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</h2><span className="order-status">{o.status==='cooking'?'Đang làm':'Đã ra món'}</span></div><ul>{o.order_items.map(i=><li className={i.cancelled_at?'cancelled-line':''} key={i.id}><div className="saved-line-heading"><strong>{i.qty} × {i.name}</strong><span>{money(i.price*i.qty)}</span></div><small>Bill {i.bill_no??1}</small>{i.note&&<p className="item-note">{i.note}</p>}{canCancel?<CancelItem compact onBusy={setItemCancelBusy} item={i} disabled={locked||!!syncError||!lastSync} onChanged={refresh}/>:i.cancelled_at&&<p>Đã hủy · {i.cancel_reason}</p>}</li>)}</ul></div></article>):<div className="empty-orders"><p>{selected.id<0?'Đơn chưa có món đã gửi.':'Bàn chưa có món đã lưu.'}</p><small>Chọn món bên trái rồi bấm Gửi bếp.</small></div>}</div></>}
+ <TableActions label={selected&&selected.id<0?'Thao tác đơn':'Thao tác bàn'} key={`table-actions:${session!.user.id}`} visible={(canTransfer||canSplit||canCancel)&&!!((selected&&currentOrders.length)||transferPending||billPending||cancelTablePending)} active={view==='service'} pending={transferPending||billPending||cancelTablePending} title={selected?.name??'Yêu cầu chờ'}>
+ {canTransfer&&<TransferPanel key={`transfer:${session!.user.id}`} userId={session!.user.id} table={selected&&selected.id>0?selected:null} tables={dineTables} sessions={sessions} disabled={cancelTablePending||itemCancelBusy||billPending||tablePending||menuPending||paymentPending||!!pending||sending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTransferPending} onTransferred={async id=>{await refresh();setSelected(tables.find(t=>t.id===id)??null);}}/>}
+ {canSplit&&<BillPanel key={`bill-move:${session!.user.id}`} userId={session!.user.id} table={selected} sessions={sessions} disabled={cancelTablePending||itemCancelBusy||tablePending||menuPending||paymentPending||transferPending||sending||!!pending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setBillPending} onChanged={async id=>{await refresh();if(id)setSelected(tables.find(t=>t.id===id)??null);}}/>}
+ {canCancel&&<CancelTablePanel key={`cancel-table:${session!.user.id}`} userId={session!.user.id} table={selected} sessions={sessions} disabled={itemCancelBusy||tablePending||menuPending||paymentPending||transferPending||billPending||sending||!!pending||!!syncError||!lastSync||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setCancelTablePending} onChanged={refresh} onMessage={setMessage}/>}
  </TableActions>
  {selected&&selected.id<0&&!sessions.some(s=>s.table_id===selected.id)&&lastSync&&<p role="status">Đơn cũ đã đóng. Quay lại danh sách bàn.</p>}
- <PaymentPanel key={session!.user.id} userId={session!.user.id} table={selected} sessions={sessions} canPay={canCashier} hasDraft={cancelTablePending||itemCancelBusy||billPending||tablePending||menuPending||transferPending||!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh} receiptRequest={receiptRequest} onReceiptError={setError}/>
+ <PaymentPanel key={session!.user.id} userId={session!.user.id} table={selected} sessions={sessions} canPay={canPay} canDiscount={canDiscount} hasDraft={cancelTablePending||itemCancelBusy||billPending||tablePending||menuPending||transferPending||!!count||!!pending||!!syncError||!lastSync} onPending={setPaymentPending} onPaid={refresh} receiptRequest={receiptRequest} onReceiptError={setError}/>
  {selected&&showTableMenu&&<footer className="order-footer"><div><small>{selected.name} · {count} món chọn thêm</small><strong>{money(total)}</strong></div><div className="footer-actions"><button disabled={locked||!count} onClick={()=>{setDrafts(d=>({...d,[selected.id]:{}}));setNotes(n=>({...n,[selected.id]:{}}));}}>Xóa chọn</button><button className="primary" disabled={locked||!count||!lastSync||unavailableDraft||(selected.id<0&&!sessions.some(s=>s.table_id===selected.id))} onClick={sendOrder}>Gửi bếp</button></div></footer>}
  </aside></div></div>
  {view==='kitchen'&&<div className="kitchen-page"><KitchenTools key={`kitchen-tools:${session!.user.id}`} orders={cooking} ready={!!lastSync} onFreshChange={setFreshKitchenIds} onShowQueue={()=>setHistory(false)}/><nav className="kitchen-tabs" aria-label="Đơn bếp"><button aria-pressed={!history} onClick={()=>setHistory(false)}>Đang làm ({cooking.length})</button><button aria-pressed={history} onClick={()=>setHistory(true)}>Lịch sử</button></nav><p className="swipe-help">Vuốt đơn sang trái hoặc phải để hoàn thành.</p><section className="kitchen-grid">{kitchen.map((o,index)=><SwipeOrderCard disabled={!!history||!canComplete||!!completing||cancelTablePending||itemCancelBusy||!!syncError} onComplete={()=>complete(o.id)} className={`kitchen-card ${!history&&index===0?'first-order':''} ${!history&&freshKitchenIds.includes(o.id)?'new-kitchen-order':''}`} key={o.id}><div className="order-heading"><h2 className="kitchen-table-path">{o.service_label||(o.table_path?.length?o.table_path:o.table_sessions.table_path?.length?o.table_sessions.table_path:[o.table_sessions.table_id]).map(placeName).join(' → ')}</h2><span>{new Date(o.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · {Math.max(0,Math.floor((Date.now()-Date.parse(o.created_at))/60000))} phút</span></div><small>Đơn {o.id.slice(0,8)}{!history&&freshKitchenIds.includes(o.id)&&<strong className="new-order-badge">Mới</strong>}</small><ul>{kitchenLines(o).map(i=><li key={i.id}><strong>{i.qty} × {i.name}</strong>{i.note&&<p className="item-note">{i.note}</p>}</li>)}</ul>{!history&&canComplete&&<button className="primary" disabled={!!completing||cancelTablePending||itemCancelBusy||!!syncError} onClick={()=>void complete(o.id)}>{completing===o.id?'Đang lưu…':'Xong'}</button>}</SwipeOrderCard>)}{!kitchen.length&&<div className="empty-state"><h3>{history?'Chưa có đơn đã xong của các bàn đang mở.':'Chưa có món đang làm.'}</h3></div>}</section></div>}
- {profile.role==='chu'&&<div className="management-page" hidden={view!=='tables'}><TableManagement key={`tables:${session!.user.id}`} userId={session!.user.id} active={view==='tables'} disabled={menuPending||cancelTablePending||itemCancelBusy||billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTablePending} onSaved={refresh}/></div>}
- {profile.role==='chu'&&<div className="management-page" hidden={view!=='menu'}><MenuPanel key={`menu:${session!.user.id}`} active={view==='menu'} userId={session!.user.id} disabled={tablePending||cancelTablePending||itemCancelBusy||billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setMenuPending} onSaved={refresh}/></div>}
- {canCashier&&<><div className="management-page" hidden={view!=='revenue'}><RevenuePanel key={`revenue:${session!.user.id}`} active={view==='revenue'}/></div><div className="management-page" hidden={view!=='audit'}><AuditPanel active={view==='audit'}/></div><div className="management-page" hidden={view!=='invoices'}><InvoiceHistory active={view==='invoices'} disabled={paymentPending} onOpen={id=>{setError('');setReceiptRequest(r=>({id,key:(r?.key??0)+1}));}}/></div></>}
+ {permitted(profile,'tables.manage')&&<div className="management-page" hidden={view!=='tables'}><TableManagement key={`tables:${session!.user.id}`} userId={session!.user.id} active={view==='tables'} disabled={menuPending||cancelTablePending||itemCancelBusy||billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setTablePending} onSaved={refresh}/></div>}
+ {permitted(profile,'menu.manage')&&<div className="management-page" hidden={view!=='menu'}><MenuPanel key={`menu:${session!.user.id}`} active={view==='menu'} userId={session!.user.id} disabled={tablePending||cancelTablePending||itemCancelBusy||billPending||paymentPending||transferPending||!!pending||sending||Object.values(drafts).some(d=>Object.values(d).some(n=>n>0))} onPending={setMenuPending} onSaved={refresh}/></div>}
+ {permitted(profile,'reports.read')&&<div className="management-page" hidden={view!=='revenue'}><RevenuePanel key={`revenue:${session!.user.id}`} active={view==='revenue'}/></div>}
+ {permitted(profile,'audit.read')&&<div className="management-page" hidden={view!=='audit'}><AuditPanel active={view==='audit'}/></div>}
+ {canReadInvoices&&<div className="management-page" hidden={view!=='invoices'}><InvoiceHistory key={`invoices:${session!.user.id}`} active={view==='invoices'} disabled={paymentPending} ownOnly={!permitted(profile,'receipts.read_all')} onOpen={id=>{setError('');setReceiptRequest(r=>({id,key:(r?.key??0)+1}));}}/></div>}
  </>}
  </main></div>;
 }
