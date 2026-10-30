@@ -26,12 +26,13 @@ const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
 type View='employees'|'tables'|'service'|'kitchen'|'menu'|'revenue'|'audit'|'invoices';
 type Item={id:string;name:string;price:number;category:string;is_out:boolean};
 type DiningTable={id:number;name:string};
-type Profile={name:string;role:string;is_active:boolean;permissions:string[];must_change_password?:boolean};
+type Profile={name:string;role:string;is_active:boolean;permissions:string[];must_change_password?:boolean;session_invalid?:boolean};
 const permitted=(profile:Profile|null,permission:string)=>!!profile?.is_active&&profile.permissions.includes(permission);
 function checkedAccess(data:unknown):Profile{
  const p=data as Partial<Profile>|null;
  if(!p||typeof p.name!=='string'||typeof p.role!=='string'||!roles[p.role]||!Array.isArray(p.permissions)||p.permissions.some(v=>typeof v!=='string'))throw new Error('Tài khoản chưa được cấp vai trò hợp lệ.');
  if(p.must_change_password!==undefined&&typeof p.must_change_password!=='boolean')throw new Error('Không xác nhận được trạng thái tài khoản.');
+ if(p.session_invalid===true)throw new Error('Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng xuất và đăng nhập lại.');
  if(p.is_active!==true)throw new Error('Tài khoản đã bị khóa. Liên hệ Chủ quán để được hỗ trợ.');
  return p as Profile;
 }
