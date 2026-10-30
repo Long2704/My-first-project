@@ -26,7 +26,7 @@ try{
   });
   const page=await context.newPage();page.setDefaultTimeout(10000);
   await page.goto('http://localhost:5173');
-  await page.getByLabel('Email',{exact:true}).fill(user.email);await page.getByLabel('Mật khẩu',{exact:true}).fill('temporary-test-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+  await page.getByLabel('Tên đăng nhập',{exact:true}).fill(user.email);await page.getByLabel('Mật khẩu',{exact:true}).fill('temporary-test-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
   await page.getByRole('heading',{name:'Đặt mật khẩu riêng'}).waitFor();assert.equal(reads,0);assert.equal(await page.getByRole('button',{name:'Phục vụ',exact:true}).count(),0);
   await page.reload();await page.getByRole('heading',{name:'Đặt mật khẩu riêng'}).waitFor();
   await page.getByLabel('Mật khẩu mới',{exact:true}).fill('new-private-test-123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('not-matching');assert.equal(await page.getByRole('button',{name:'Lưu mật khẩu mới'}).isDisabled(),true);

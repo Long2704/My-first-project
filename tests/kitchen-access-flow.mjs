@@ -49,7 +49,7 @@ try {
  });
  const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://localhost:5173');
- await page.getByLabel('Email',{exact:true}).fill('kitchen@example.test');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+ await page.getByLabel('Tên đăng nhập',{exact:true}).fill('kitchen@example.test');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
  await page.getByRole('heading',{name:'Khu vực bếp',exact:true}).waitFor();
  assert.equal(await page.getByRole('button',{name:'Báo cáo doanh thu',exact:true}).count(),0);
  assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);

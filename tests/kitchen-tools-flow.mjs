@@ -58,7 +58,7 @@ const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[]
 
 async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
 async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
-await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bếp \(/}).click();await page.getByRole('heading',{name:'Bàn 1',exact:true}).waitFor();
 assert.equal(await page.locator('.new-order-badge').count(),0);assert.equal(await page.evaluate(()=>window.deviceCalls.notes),0);
 await page.getByRole('button',{name:'Bật chuông đơn mới',exact:true}).click();await page.getByRole('button',{name:'Tắt chuông đơn mới',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.deviceCalls.notes),2);

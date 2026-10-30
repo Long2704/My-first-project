@@ -16,7 +16,7 @@ function fixture(mode='ok',role='chu'){
   assert.equal(init.headers.Authorization,'Bearer mock-user');assert.equal(init.headers.apikey,publicKey);
   if(url.endsWith('/auth/v1/user'))return Response.json({id:'owner'});
   if(url.endsWith('/get_my_access'))return Response.json({role,is_active:mode!=='locked',permissions:role==='chu'?['employees.manage']:[]});
-  if(url.endsWith('/prepare_employee_creation'))return mode==='collision'?Response.json({code:'23505'},{status:409}):Response.json({completed,user_id:completed?'new-user':null});
+  if(url.endsWith('/prepare_employee_creation')||url.endsWith('/prepare_employee_account'))return mode==='collision'?Response.json({code:'23505'},{status:409}):Response.json({completed,user_id:completed?'new-user':null});
   if(url.endsWith('/cancel_employee_creation'))return Response.json({released:true});
   throw new Error('unexpected URL');
  }});
@@ -33,4 +33,5 @@ for(const role of ['chu','thu_ngan','owner'])assert.equal((await fixture().send(
 assert.equal((await fixture().send({...draft,password:'short'})).status,400);
 const check=fixture();assert.equal((await check.send({...draft,action:'check_creation',password:undefined})).pending,true);assert.equal(check.count(),0);
 assert.equal((await check.send({...draft,action:'cancel_creation',password:undefined})).released,true);
+const usernameFixture=fixture();const usernameInput={...draft,username:'bep01',role:'bep'};delete usernameInput.email;delete usernameInput.staff_code;assert.equal((await usernameFixture.send(usernameInput)).ok,true);assert.equal(usernameFixture.bodies[0].email,draft.request_id+'@staff.pos.invalid');
 console.log('ĐẠT Edge tạo nhân viên: Owner, chặn Kitchen/Waiter/khóa/nâng quyền, retry không tạo trùng, mất phản hồi phục hồi, không reset email cũ, không lộ mật khẩu/key. Fetch giả lập.');

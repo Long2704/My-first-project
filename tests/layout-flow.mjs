@@ -43,7 +43,7 @@ const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[]
 async function management(name){
  if(await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).isVisible())await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).click();if(!await page.locator('.management-menu').evaluate(e=>e.open))await page.locator('.management-menu>summary').click();await page.getByRole('button',{name,exact:true}).click();}
 async function openOrderMenu(){const add=page.getByRole('button',{name:'Thêm món',exact:true});if(await add.isVisible())await add.click();}
-await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.locator('.table-card:visible').count(),12);assert.equal(await page.locator('.management-page:visible').count(),0);assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
 assert.equal(await page.getByRole('button',{name:'Hóa đơn gần đây',exact:true}).count(),0);
 assert.equal(await page.locator('.workspace-heading small').count(),0);

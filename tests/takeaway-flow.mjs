@@ -32,7 +32,7 @@ try{
   await route.fulfill({status:200,json:body});
  });
  const page=await context.newPage();page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+ await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 
  await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.locator('.table-card:visible').count(),13);
  await page.evaluate(()=>localStorage.setItem('goc-pho-pending-v1:test-user',JSON.stringify({requestId:'old-pending',tableId:-99,items:[{menu_item_id:'food',qty:1,note:'Không hành',expected_price:58000}]})));await page.reload();await page.getByRole('button',{name:'Thử gửi lại đơn này',exact:true}).click();await page.getByRole('alert').filter({hasText:'Đơn chưa được gửi vì bàn cũ đã ngừng hoạt động.'}).waitFor();assert.equal(await page.evaluate(()=>localStorage.getItem('goc-pho-pending-v1:test-user')),null);assert.equal(await page.getByRole('button',{name:'Thử gửi lại đơn này',exact:true}).count(),0);

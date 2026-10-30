@@ -42,7 +42,7 @@ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(
 
 async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
 async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
-await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).click();await page.getByRole('button',{name:'Thanh toán Bàn 1',exact:true}).click();
 let dialog=page.getByRole('dialog');await dialog.waitFor();
 await dialog.getByLabel('Giảm giá',{exact:true}).fill('10%');await dialog.getByLabel('Tiền khách đưa',{exact:true}).fill('50000');
