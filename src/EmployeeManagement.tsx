@@ -2,8 +2,9 @@ import {useEffect,useRef,useState} from 'react';
 import {supabase} from './supabase';
 import PosIcon from './PosIcon';
 import EmployeeCreate from './EmployeeCreate';
+import EmployeeEditor from './EmployeeEditor';
 
-type Employee={id:string;name:string;staff_code:string|null;role:string;is_active:boolean;created_at:string};
+type Employee={id:string;name:string;staff_code:string|null;role:string;is_active:boolean;created_at:string;staff_version?:number};
 type Filters={search:string;role:string;status:string};
 const roleLabels:Record<string,string>={chu:'Owner',phuc_vu:'Waiter',bep:'Kitchen',thu_ngan:'Thu ngân (cũ)'};
 const pageSize=20;
@@ -17,6 +18,7 @@ export default function EmployeeManagement({active,userId}:{active:boolean;userI
  const [rows,setRows]=useState<Employee[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1);
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[reload,setReload]=useState(0);
  const sequence=useRef(0);
+ const [editing,setEditing]=useState<Employee|null>(null);
 
  useEffect(()=>{
   const request=++sequence.current;
@@ -55,6 +57,7 @@ export default function EmployeeManagement({active,userId}:{active:boolean;userI
  function search(){setPage(1);setFilters({...draft,search:draft.search.trim()});setReload(n=>n+1);}
  const pages=Math.max(1,Math.ceil(total/pageSize));
  return <section className="employee-management" aria-label="Danh sách nhân viên">
+  <EmployeeEditor employee={editing} userId={userId} onClose={()=>setEditing(null)} onChanged={()=>setReload(n=>n+1)}/>
   <EmployeeCreate userId={userId} onCreated={()=>{setPage(1);setReload(n=>n+1);}}/>
   <div className="employee-toolbar"><span role="status">{busy?'Đang tải…':error?'Chưa tải được':`${total} nhân viên`}</span><button aria-label="Tải lại nhân viên" disabled={busy} onClick={()=>setReload(n=>n+1)}><PosIcon name="refresh"/>Tải lại</button></div>
   <form className="employee-filters" onSubmit={e=>{e.preventDefault();search();}}>
@@ -67,6 +70,7 @@ export default function EmployeeManagement({active,userId}:{active:boolean;userI
    <div className="employee-list">{rows.map(employee=><article key={employee.id} aria-label={`Nhân viên ${employee.name}`}>
     <div className="employee-identity"><h3>{employee.name}</h3><p>{employee.staff_code?`Mã: ${employee.staff_code}`:'Chưa có mã'}</p></div>
     <dl><div><dt>Vai trò</dt><dd><span className="employee-role">{roleLabels[employee.role]??'Chưa xác định'}</span></dd></div><div><dt>Trạng thái</dt><dd><span className={`employee-status ${employee.is_active?'is-active':'is-locked'}`}>{employee.is_active?'Đang hoạt động':'Đã khóa'}</span></dd></div><div><dt>Ngày tạo</dt><dd><time dateTime={employee.created_at}>{createdLabel(employee.created_at)}</time></dd></div></dl>
+    <div className="employee-row-actions">{['phuc_vu','bep'].includes(employee.role)?<button aria-label={`Sửa nhân viên ${employee.name}`} disabled={busy} onClick={()=>setEditing(employee)}>Sửa</button>:<small>{employee.role==='chu'?'Owner được bảo vệ':'Vai trò cũ'}</small>}</div>
    </article>)}</div>
    {pages>1&&<nav className="employee-pagination" aria-label="Phân trang nhân viên"><button disabled={busy||page<=1} onClick={()=>setPage(n=>n-1)}>Trang trước</button><span>Trang {page} / {pages}</span><button disabled={busy||page>=pages} onClick={()=>setPage(n=>n+1)}>Trang sau</button></nav>}
   </>}

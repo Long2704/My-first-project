@@ -45,7 +45,9 @@
     "test:employee-create-ui": "node tests/employee-create-flow.mjs",
     "test:staff-admin": "node tests/staff-admin-auth.mjs && node tests/staff-admin-create.mjs",
     "test:initial-password": "node tests/initial-password-sql.mjs",
-    "test:initial-password-ui": "node tests/initial-password-flow.mjs"
+    "test:initial-password-ui": "node tests/initial-password-flow.mjs",
+    "test:employee-management": "node tests/employee-management-sql.mjs",
+    "test:employee-management-ui": "node tests/employee-management-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
