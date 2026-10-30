@@ -93,6 +93,41 @@ export function createStaffAdminHandler(settings: Settings) {
       if (!input || typeof input !== 'object' || Array.isArray(input)) return reply(400,{error:'Yêu cầu không hợp lệ.'});
       const data=input as Record<string,unknown>;
       if(data.action==='check_access')return reply(200,{ok:true,message:'Owner đã được xác thực và có quyền quản lý nhân viên.'});
+      if(['reset_password','check_password_reset'].includes(String(data.action))){
+       const uuid=(value:unknown)=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+       if(!uuid(data.employee_id)||data.request_id!==undefined&&!uuid(data.request_id))return reply(400,{error:'Yêu cầu đặt lại không hợp lệ.'});
+       const rpc=async(name:string,body:unknown,admin=false)=>{
+        const response=await fetcher(`${baseUrl}/rest/v1/rpc/${name}`,{method:'POST',headers:admin?{apikey:settings.serviceKey!,Authorization:`Bearer ${settings.serviceKey}`,'Content-Type':'application/json'}:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
+        return {response,data:await response.json()};
+       };
+       if(data.action==='check_password_reset'){
+        const status=await rpc('get_employee_password_reset',{p_employee_id:data.employee_id,p_request_id:data.request_id??null});
+        if(!status.response.ok)return reply(403,{error:'Chưa đọc được yêu cầu đặt lại.'});
+        return reply(200,{ok:true,reset:status.data});
+       }
+       if(!settings.serviceKey)return reply(503,{error:'Backend đặt lại chưa sẵn sàng.'});
+       if(!uuid(data.request_id)||!Number.isInteger(data.expected_version)||(data.expected_version as number)<1||typeof data.password!=='string'||data.password.length<12||data.password.length>128)return reply(400,{error:'Mật khẩu tạm cần 12–128 ký tự và yêu cầu phải hợp lệ.'});
+       const prepared=await rpc('begin_employee_password_reset',{p_request_id:data.request_id,p_employee_id:data.employee_id,p_expected_version:data.expected_version});
+       if(!prepared.response.ok)return reply(409,{error:'Không bắt đầu được đặt lại. Kiểm tra quyền và tải lại danh sách nhân viên.'});
+       if(prepared.data?.completed===true)return reply(200,{ok:true,completed:true});
+       if(prepared.data?.conflict)return reply(409,{error:'Đã có yêu cầu đặt lại đang chờ. Bấm Kiểm tra lại để tiếp tục.',pending:true,reset:prepared.data});
+       const attempt=await rpc('register_employee_password_attempt',{p_request_id:data.request_id,p_owner_id:user.id},true);
+       if(!attempt.response.ok)return reply(503,{error:'Chưa bắt đầu được lần đổi mật khẩu. Nhân viên vẫn bị khóa; kiểm tra lại.',pending:true});
+       if(attempt.data?.completed)return reply(200,{ok:true,completed:true});
+       if(!uuid(attempt.data?.attempt_id))return reply(503,{error:'Chưa xác nhận được yêu cầu. Kiểm tra lại.',pending:true});
+       const existing=await fetcher(`${baseUrl}/auth/v1/admin/users/${data.employee_id}`,{method:'GET',headers:{apikey:settings.serviceKey,Authorization:`Bearer ${settings.serviceKey}`},signal:AbortSignal.timeout(10000)});
+       if(!existing.ok)return reply(503,{error:'Chưa đọc được tài khoản. Nhân viên vẫn bị khóa; thử lại.',pending:true});
+       const authBody=await existing.json();
+       const authUser=authBody.user??authBody;
+       const metadata=authUser.app_metadata&&typeof authUser.app_metadata==='object'?authUser.app_metadata:{};
+       let changed:Response;
+       try{changed=await fetcher(`${baseUrl}/auth/v1/admin/users/${data.employee_id}`,{method:'PUT',headers:{apikey:settings.serviceKey,Authorization:`Bearer ${settings.serviceKey}`,'Content-Type':'application/json'},body:JSON.stringify({password:data.password,app_metadata:{...metadata,pos_staff_reset_attempt:attempt.data.attempt_id}}),signal:AbortSignal.timeout(15000)});}
+       catch{return reply(503,{error:'Chưa xác nhận được kết quả. Nhân viên vẫn bị khóa; chọn mật khẩu tạm khác rồi thử lại cùng yêu cầu.',pending:true});}
+       if(!changed.ok)return reply(changed.status>=500?503:409,{error:'Auth chưa chấp nhận mật khẩu. Nhân viên vẫn bị khóa; chọn mật khẩu tạm khác rồi thử lại.',pending:true});
+       const finished=await rpc('finish_employee_password_reset',{p_request_id:data.request_id,p_owner_id:user.id},true);
+       if(!finished.response.ok)return reply(503,{error:'Chưa xác nhận hoàn tất. Bấm Kiểm tra lại; nếu còn chờ, chọn mật khẩu tạm khác và thử lại.',pending:true});
+       return reply(200,{ok:true,completed:true,message:'Đã đặt mật khẩu tạm mới. Nhân viên phải đăng nhập lại và đổi mật khẩu.'});
+      }
       if(!['create_employee','check_creation','cancel_creation'].includes(String(data.action)))return reply(400,{error:'Chức năng này chưa được bật.'});
       if(!settings.serviceKey)return reply(503,{error:'Chưa cấu hình backend tạo nhân viên.'});
       const usernameMode=typeof data.username==='string';
