@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import DraggableTables from './DraggableTables';
+import PosIcon from './PosIcon';
 import {supabase} from './supabase';
 type Table={id:number;name:string;is_active:boolean;version:number;busy:boolean};
 type OrderAttempt={requestId:string;expected:number[];ordered:number[]};
@@ -37,16 +38,16 @@ export default function TableManagement({userId,active,disabled,onPending,onSave
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Chưa xác nhận thứ tự bàn. Thử lại cùng mã.');}finally{lock.current=false;if(alive.current)setBusy(false);}
  }
  function start(t?:Table){setError('');setMessage('');setEdit({requestId:crypto.randomUUID(),tableId:t?.id??null,version:t?.version??0,name:t?.name??'',active:t?.is_active??true});}
- return <section className="table-management" aria-label="Quản lý bàn"><div className="panel-heading"><div><h2>Danh sách bàn</h2><p>Thêm bàn, đổi tên hoặc ngừng sử dụng. Bàn đang có khách hay còn món bếp chưa xong cần xử lý xong trước khi sửa.</p></div><button disabled={busy||dirty||!!orderPending} onClick={()=>void load()}>Tải lại bàn</button></div>
+ return <section className="table-management" aria-label="Quản lý bàn"><div className="table-management-toolbar">{dirty&&!orderPending?<><span className="visually-hidden" role="status">Thứ tự mới chưa lưu.</span><button className="primary" disabled={!dirty||!!orderPending||disabled||busy||!!pending||!!edit||storageError} onClick={()=>void saveOrder()}>Lưu thứ tự bàn</button><button disabled={!dirty||busy||!!pending||!!orderPending} onClick={()=>void load()}>Hủy sắp xếp</button></>:<><button className="primary" disabled={disabled||busy||dirty||!!orderPending||!!pending||storageError} onClick={()=>start()}>Thêm bàn</button><button className="table-reload" aria-label="Tải lại bàn" title="Tải lại bàn" disabled={busy||dirty||!!orderPending} onClick={()=>void load()}><PosIcon name="refresh"/>Tải lại</button></>}</div>
  {storageError&&<p role="alert">Không đọc được cập nhật bàn chờ. Không xóa dữ liệu trình duyệt; liên hệ hỗ trợ.</p>}
  {pending&&<aside role="status"><strong>Cập nhật bàn chờ xác nhận: {pending.name}</strong><p>Thử lại cùng mã để tránh thêm bàn trùng.</p><button disabled={busy} onClick={()=>void save()}>Thử lại cùng mã cập nhật bàn</button></aside>}
- <button className="primary" disabled={disabled||busy||dirty||!!orderPending||!!pending||storageError} onClick={()=>start()}>Thêm bàn</button>
  {disabled&&!pending&&<p>Gửi hoặc xóa các món đang chọn và xử lý yêu cầu chờ trước khi quản lý bàn.</p>}
  {edit&&<form className="table-edit-form" onSubmit={e=>{e.preventDefault();void save();}}><h3>{edit.tableId===null?'Thêm bàn':'Sửa bàn'}</h3><fieldset disabled={disabled||busy||dirty||!!orderPending||!!pending||storageError}><label>Tên bàn<input required maxLength={80} placeholder="Ví dụ: Bàn 14, Sân trước" value={edit.name} onChange={e=>setEdit({...edit,name:e.target.value})}/></label><label className="checkbox-label"><input type="checkbox" checked={edit.active} onChange={e=>setEdit({...edit,active:e.target.checked})}/>Đang sử dụng</label><button type="submit" className="primary" disabled={!edit.name.trim()}>Lưu bàn</button></fieldset><button type="button" disabled={busy||!!pending} onClick={()=>setEdit(null)}>Đóng sửa bàn</button></form>}
- <p id="table-sort-help">Kéo nút ⠿ cạnh tên bàn, rồi bấm Lưu thứ tự bàn. Có thể dùng phím ↑ / ↓ trên nút kéo. Bàn đang có khách vẫn sắp xếp được.</p>
+ <p id="table-sort-help" className="visually-hidden">Kéo nút ⠿ cạnh tên bàn, rồi bấm Lưu thứ tự bàn. Có thể dùng phím ↑ / ↓ trên nút kéo. Bàn đang có khách vẫn sắp xếp được.</p>
  {orderPending&&<aside role="status"><strong>Thứ tự bàn chờ xác nhận.</strong><button disabled={busy} onClick={()=>void saveOrder()}>Thử lại cùng mã sắp xếp</button></aside>}
- <div className="table-order-controls" role="status"><span>{dirty?'Thứ tự mới chưa lưu.':'Thứ tự đã lưu.'}</span><button className="primary" disabled={!dirty||!!orderPending||disabled||busy||!!pending||!!edit||storageError} onClick={()=>void saveOrder()}>Lưu thứ tự bàn</button><button disabled={!dirty||busy||!!pending||!!orderPending} onClick={()=>void load()}>Hủy sắp xếp</button></div>
- <DraggableTables rows={tables} disabled={disabled||busy||!!pending||!!orderPending||storageError||!!edit} onChange={next=>{setTables(next);setError('');setMessage('');}} render={t=><><div className="sortable-table-name"><h3>{t.name}</h3><p>{!t.is_active?'Ngừng sử dụng':t.busy?'Đang phục vụ / bếp chưa xong':'Đang sử dụng · Trống'}</p></div><button disabled={disabled||busy||dirty||!!pending||!!orderPending||storageError||t.busy} onClick={()=>start(t)}>Sửa {t.name}</button></>}/>
+
+ <DraggableTables rows={tables} disabled={disabled||busy||!!pending||!!orderPending||storageError||!!edit} onChange={next=>{setTables(next);setError('');setMessage('');}} render={t=><><div className="sortable-table-name"><h3>{t.name}</h3><p title={t.busy?'Bàn đang có khách hoặc món bếp chưa xong':undefined}>{!t.is_active?'Ngừng sử dụng':t.busy?'Đang phục vụ':'Trống'}</p></div><button className="table-edit-button" aria-label={`Sửa ${t.name}`} title={t.busy?'Xử lý xong đơn của bàn trước khi sửa':`Sửa ${t.name}`} disabled={disabled||busy||dirty||!!pending||!!orderPending||storageError||t.busy} onClick={()=>start(t)}>Sửa</button></>}/>
+
 
  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}</section>;
 }

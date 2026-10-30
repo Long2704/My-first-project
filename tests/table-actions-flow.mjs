@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -12,12 +13,12 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu;
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
  else if(u.pathname==='/rest/v1/orders')body=sessions.flatMap(s=>s.orders.filter(o=>o.status==='cooking').map(o=>({...o,table_sessions:{table_id:s.table_id,closed_at:s.closed?'2026-10-27':null,table_path:s.table_path}})));
- else if(u.pathname==='/rest/v1/audit_log')body=audit;
+ else if(u.pathname==='/rest/v1/audit_log')body=audit.filter(e=>!['table_order','table_update','takeaway_created','takeaway_discarded','menu_update'].includes(e.type));
  else if(u.pathname==='/rest/v1/rpc/transfer_table'){
   const p=req.postDataJSON();assert.equal(p.p_reason,'');mergeRequests.push(p);
   if(mergeRequests.length===1){

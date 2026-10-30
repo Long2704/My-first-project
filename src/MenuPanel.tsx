@@ -39,7 +39,7 @@ export default function MenuPanel({userId,disabled,onPending,onSaved,active}:{us
     throw new Error(['PGRST202','42883'].includes(r.error.code)?'Cần chạy migration 008_menu_management.sql rồi Thử lại cùng mã cập nhật.':`Chưa xác nhận lưu: ${r.error.message}. Thử lại cùng mã cập nhật, không tạo món lần nữa.`);
    }
    await onSaved();await readMenu();localStorage.removeItem(key);
-   if(alive.current){setPending(null);setEdit(null);setMessage('Đã lưu thực đơn. Đơn và hóa đơn đã lưu giữ nguyên giá cũ.');}
+   if(alive.current){setPending(null);setEdit(null);setMessage('Đã lưu thực đơn.');}
   }catch(e){if(alive.current)setError(e instanceof Error?e.message:'Chưa xác nhận lưu. Thử lại cùng mã cập nhật.');}
   finally{lock.current=false;if(alive.current)setBusy(false);}
  }
@@ -48,7 +48,7 @@ export default function MenuPanel({userId,disabled,onPending,onSaved,active}:{us
  {active===undefined&&<button disabled={busy} aria-expanded={open} onClick={()=>{if(open&&!pending)setOpen(false);else void load();}}>Quản lý thực đơn</button>}
  {storageError&&<p role="alert">Không đọc được cập nhật thực đơn chờ. Không xóa dữ liệu trình duyệt; liên hệ hỗ trợ.</p>}
  {pending&&<aside role="status"><strong>Cập nhật thực đơn chờ xác nhận: {pending.name}</strong><p>{pending.price.toLocaleString('vi-VN')}đ · Giữ nguyên mã để tránh tạo trùng món.</p><button disabled={busy} onClick={()=>void save()}>{busy?'Đang lưu…':'Thử lại cùng mã cập nhật'}</button></aside>}
- {open&&<>{active===undefined&&<h2>Quản lý thực đơn</h2>}<p>Giá mới chỉ áp dụng cho đơn gửi sau khi cập nhật. Ngừng bán sẽ ẩn món khỏi gọi món; dữ liệu cũ vẫn được giữ.</p>
+ {open&&<>{active===undefined&&<h2>Quản lý thực đơn</h2>}
  {disabled&&!pending&&<p>Xử lý các yêu cầu chờ và gửi hoặc xóa món đang chọn trước khi sửa thực đơn.</p>}
  <button disabled={disabled||busy||!!pending||storageError} onClick={()=>start()}>Thêm món mới</button>
  {edit&&<form className="menu-edit-form" onSubmit={e=>{e.preventDefault();void save();}}><h3>{edit.version===0?'Thêm món mới':'Sửa món'}</h3><fieldset disabled={disabled||busy||!!pending||storageError}>
@@ -60,7 +60,7 @@ export default function MenuPanel({userId,disabled,onPending,onSaved,active}:{us
  <label className="checkbox-label"><input type="checkbox" checked={edit.out} onChange={e=>setEdit({...edit,out:e.target.checked})}/>Hết món tạm thời</label>
  {!valid&&<p role="alert">Nhập tên món và giá nguyên từ 0 đến 10.000.000đ; thứ tự từ 0 đến 9999, không dấu phân cách.</p>}
  <button className="primary" disabled={!valid} type="submit">Lưu thực đơn</button></fieldset><button type="button" disabled={busy||!!pending} onClick={()=>setEdit(null)}>Đóng chỉnh sửa</button></form>}
- <div className="managed-menu-list">{items.map(i=><article key={i.id}><div><h3>{i.name}</h3><p>{i.price.toLocaleString('vi-VN')}đ · {groups.find(g=>g.id===i.category)?.name} · {!i.is_active?'Ngừng bán':i.is_out?'Hết món':'Đang bán'}</p></div><button disabled={disabled||busy||!!pending||storageError} onClick={()=>start(i)}>Sửa {i.name}</button></article>)}</div>
+ <div className="managed-menu-list">{items.map(i=><article key={i.id}><div><h3>{i.name}</h3><p>{i.price.toLocaleString('vi-VN')}đ · {groups.find(g=>g.id===i.category)?.name}{(!i.is_active||i.is_out)&&<span className="menu-item-state">{!i.is_active?'Ngừng bán':'Hết món'}</span>}</p></div><button className="menu-edit-button" aria-label={`Sửa ${i.name}`} title={`Sửa ${i.name}`} disabled={disabled||busy||!!pending||storageError} onClick={()=>start(i)}>Sửa</button></article>)}</div>
  {!busy&&!items.length&&!error&&<p>Chưa có món trong thực đơn.</p>}
  </>}{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
  </section>;
