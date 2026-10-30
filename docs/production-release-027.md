@@ -5,6 +5,10 @@ Người dùng đã cho phép hoàn thành phần tạo tài khoản và đưa l
 ## Mã nguồn và phụ thuộc
 Production main đang ở 94cb7aa35f12a21ea1b19168cd2522f2356fd9bd, tương ứng giao diện cũ trước 017. Nhánh phát hành phải chứa cả 017–027 và các sửa giao diện đã được người dùng áp dụng trên staging, không chỉ file 027. Không chép dữ liệu hoặc tài khoản thử nghiệm sang production. Không thay URL/key production bằng .env.local staging.
 
+## Gói áp dụng đã chuẩn bị
+
+Người dùng đã gửi preflight production: profiles chỉ có bốn cột nền, một chu, chỉ current_staff_role và không có trigger Auth. releases/production-017-027.sql gộp đúng 017–027 trong một transaction, có guard kiểm tra schema và chặn chạy lại. Không đặt file gộp vào supabase/migrations. Đã kiểm thử PGlite: lỗi ở cuối hoàn tác mọi phần trước, hồ sơ cũ giữ nguyên và Owner vẫn gọi món. 019 chỉ thu hẹp quyền trên các bảng POS được liệt kê, tránh tác động bảng không liên quan.
+
 ## Thứ tự triển khai
 1. Xác định đúng Supabase project phục vụ Vercel production và migration đã có bằng SQL preflight chỉ đọc. Không suy đoán production đang giống staging.
 2. Lưu bản sao schema và dữ liệu production mới nhất, cùng các file Edge Function đang deploy và commit Vercel hiện tại. Backup giữ riêng trên máy người dùng/nơi được bảo vệ, không upload secrets, auth dump hay dữ liệu khách lên GitHub/chat. Backup public trước đây không bao gồm Auth. Cần có phương án giữ/khôi phục tài khoản Auth trước khi thao tác schema Auth.
