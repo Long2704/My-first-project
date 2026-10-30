@@ -31,7 +31,7 @@ async function management(name){const control=page.locator('.management-menu');i
 async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 async function openOrderMenu(){const add=page.getByRole('button',{name:'Thêm món',exact:true});if(await add.isVisible())await add.click();}
 await page.goto('http://localhost:5173');
-await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password-for-mock-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-password-for-mock-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 
 page.setDefaultTimeout(12000);
 await page.getByRole('button',{name:/^Bàn 1 /}).click();assert.equal(await page.getByRole('button',{name:'Thêm món',exact:true}).count(),0);await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();await page.getByLabel('Ghi chú món').fill('Không hành');await page.getByRole('button',{name:'Gửi bếp',exact:true}).click();

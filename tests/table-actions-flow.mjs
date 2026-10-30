@@ -68,7 +68,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
 async function tableActions(){if(!await page.locator('.table-actions-dialog').evaluate(e=>e.open))await page.getByRole('button',{name:'Thao tác bàn',exact:true}).click();}
 async function swipe(card,dx,dy=0){await card.scrollIntoViewIfNeeded();const b=await card.boundingBox(),x=b.x+b.width/2,y=b.y+48;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:8});await page.mouse.up();}
-await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 
 await page.getByRole('button',{name:/^Bàn 1 /}).click();
 assert.equal(await page.getByRole('button',{name:'Chuyển Bàn 1',exact:true}).count(),0);

@@ -4,7 +4,7 @@ import {mockAccess} from './support/access.mjs';
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844}});
- const employee={id:'waiter',name:'Phục vụ thử',staff_code:'NV01',role:'phuc_vu',is_active:true,staff_version:1,created_at:'2026-10-30T00:00:00Z'};
+ const employee={id:'waiter',name:'Phục vụ thử',staff_code:'NV01',username:'nv01',role:'phuc_vu',is_active:true,staff_version:1,created_at:'2026-10-30T00:00:00Z'};
  const owner={...employee,id:'owner',name:'Owner',staff_code:null,role:'chu'};
  const calls=[],stored=new Map();let mode='lost';
  await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
@@ -13,13 +13,13 @@ try{
   else if(path==='/auth/v1/user')body={id:'owner',email:'owner@example.test'};
   else if(path.endsWith('/get_my_access'))body=mockAccess({name:'Owner',role:'chu',is_active:true});
   else if(path.endsWith('/list_employees'))body={items:[owner,employee],total:2,page:1,page_size:20};
-  else if(path.endsWith('/update_employee')){
+  else if(path.endsWith('/update_employee_account')){
    const p=route.request().postDataJSON();calls.push(p);
    if(stored.has(p.p_request_id))body=stored.get(p.p_request_id);
    else{
     if(mode==='stale'){employee.staff_version++;mode='ok';return route.fulfill({status:400,json:{code:'P0001',message:'Thông tin nhân viên đã thay đổi. Đóng cửa sổ và tải lại danh sách trước khi sửa.'}});}
     assert.equal(p.p_expected_version,employee.staff_version);
-    Object.assign(employee,{name:p.p_name,staff_code:p.p_staff_code,role:p.p_role,is_active:p.p_is_active,staff_version:employee.staff_version+1});body={ok:true,employee_id:employee.id,staff_version:employee.staff_version};stored.set(p.p_request_id,body);
+    Object.assign(employee,{name:p.p_name,username:p.p_username,role:p.p_role,is_active:p.p_is_active,staff_version:employee.staff_version+1});body={ok:true,employee_id:employee.id,staff_version:employee.staff_version};stored.set(p.p_request_id,body);
     if(mode==='lost'){mode='ok';return route.fulfill({status:503,json:{message:'response unavailable'}});}
    }
   }else if(['/rest/v1/menu_items','/rest/v1/orders','/rest/v1/table_sessions','/rest/v1/restaurant_tables'].includes(path))body=[];
@@ -27,7 +27,7 @@ try{
   await route.fulfill({json:body});
  });
  const page=await context.newPage();page.setDefaultTimeout(10000);
- await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('owner@example.test');await page.getByLabel('Mật khẩu',{exact:true}).fill('mock-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+ await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('owner@example.test');await page.getByLabel('Mật khẩu',{exact:true}).fill('mock-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
  async function openList(){await page.locator('.management-menu summary').click();await page.getByRole('button',{name:'Quản lý nhân viên',exact:true}).click();await page.getByRole('heading',{name:'Phục vụ thử',exact:true}).waitFor();}
  await openList();assert.equal(await page.getByRole('button',{name:'Sửa nhân viên Owner',exact:true}).count(),0);
  await page.getByRole('button',{name:'Sửa nhân viên Phục vụ thử',exact:true}).click();

@@ -134,7 +134,18 @@ function App(){
  },[refresh]);
  async function login(e:React.FormEvent){
   e.preventDefault();if(!supabase)return;setBusy(true);setError('');
-  try{const r=await supabase.auth.signInWithPassword({email:email.trim(),password});if(r.error)setError('Đăng nhập thất bại. Kiểm tra email, mật khẩu và kết nối.');else setPassword('');}catch{setError('Không kết nối được Supabase.');}finally{setBusy(false);}
+  try{
+   // Tài khoản cũ vẫn đăng nhập được trong lúc chuyển đổi; giao diện chỉ hỏi tên đăng nhập.
+   if(email.includes('@')){const r=await supabase.auth.signInWithPassword({email:email.trim(),password});if(r.error)setError('Đăng nhập thất bại. Kiểm tra tên đăng nhập, mật khẩu và kết nối.');else setPassword('');}
+   else{
+    const r=await supabase.functions.invoke('staff-login',{body:{username:email.trim().toLowerCase(),password}});
+    if(r.error||!r.data?.access_token||!r.data?.refresh_token){
+     let message='Đăng nhập thất bại. Kiểm tra tên đăng nhập, mật khẩu và kết nối.';
+     try{const body=r.error?.context instanceof Response?await r.error.context.json():r.data;if(typeof body?.error==='string')message=body.error;}catch{/* Không hiển thị lỗi nội bộ. */}
+     setError(message);
+    }else{const session=await supabase.auth.setSession({access_token:r.data.access_token,refresh_token:r.data.refresh_token});if(session.error)setError('Chưa xác nhận được phiên đăng nhập. Vui lòng thử lại.');else setPassword('');}
+   }
+  }catch{setError('Không kết nối được Supabase.');}finally{setBusy(false);}
  }
  async function logout(){if(!supabase||(profile&&!profile.must_change_password&&(sending||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy)))return;setBusy(true);try{const r=await supabase.auth.signOut({scope:'local'});if(r.error)setError('Chưa đăng xuất được.');}catch{setError('Chưa đăng xuất được.');}finally{setBusy(false);}}
  const qty=selected?drafts[selected.id]??{}:{};
@@ -209,7 +220,7 @@ function App(){
  <main className="app-main">
  {error&&<aside className="notice error-notice" role="alert">{error}{!profile&&session&&<p><button onClick={()=>setReload(n=>n+1)}>Thử tải lại</button></p>}</aside>}
  {message&&<aside className="notice" role="status">{message}<button className="dismiss-notice" aria-label="Ẩn thông báo" onClick={()=>setMessage('')}>×</button></aside>}
- {loading?<div className="loading-state" role="status">Đang tải…</div>:!session?<div className="login-shell"><form className="login-form" onSubmit={login}><small>BÚN RIÊU GÓC PHỐ</small><h2>Đăng nhập nhân viên</h2><p>Chào ngày mới, sẵn sàng phục vụ.</p><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Mật khẩu<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy||!supabase} type="submit">{busy?'Đang đăng nhập…':'Đăng nhập'}</button></form></div>:profile?.must_change_password?<React.Suspense fallback={<p role="status">Đang tải thiết lập mật khẩu…</p>}><InitialPasswordSetup key={`initial-password:${session!.user.id}`} onBusy={setBusy} onCompleted={()=>setReload(n=>n+1)}/></React.Suspense>:profile&&<>
+ {loading?<div className="loading-state" role="status">Đang tải…</div>:!session?<div className="login-shell"><form className="login-form" onSubmit={login}><small>BÚN RIÊU GÓC PHỐ</small><h2>Đăng nhập nhân viên</h2><p>Chào ngày mới, sẵn sàng phục vụ.</p><label>Tên đăng nhập<input type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Mật khẩu<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy||!supabase} type="submit">{busy?'Đang đăng nhập…':'Đăng nhập'}</button></form></div>:profile?.must_change_password?<React.Suspense fallback={<p role="status">Đang tải thiết lập mật khẩu…</p>}><InitialPasswordSetup key={`initial-password:${session!.user.id}`} onBusy={setBusy} onCompleted={()=>setReload(n=>n+1)}/></React.Suspense>:profile&&<>
  <div className={`workspace-heading${view==='kitchen'?' kitchen-heading':''}`}><div><div className="workspace-title-row"><h1>{titles[view]}</h1>{view==='kitchen'&&<KitchenTools key={`kitchen-tools:${session!.user.id}`} orders={cooking} ready={!!lastSync} onFreshChange={setFreshKitchenIds} onShowQueue={()=>setHistory(false)}/>}</div></div></div>
  {syncError&&<aside className="notice error-notice" role="alert">{syncError}</aside>}
  {pending&&<aside className="notice" role="status"><strong>Đơn chờ xác nhận — {placeName(pending.tableId)}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn.</p><button disabled={sending||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy} onClick={sendOrder}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}

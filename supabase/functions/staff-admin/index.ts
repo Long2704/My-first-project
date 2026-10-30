@@ -95,20 +95,24 @@ export function createStaffAdminHandler(settings: Settings) {
       if(data.action==='check_access')return reply(200,{ok:true,message:'Owner đã được xác thực và có quyền quản lý nhân viên.'});
       if(!['create_employee','check_creation','cancel_creation'].includes(String(data.action)))return reply(400,{error:'Chức năng này chưa được bật.'});
       if(!settings.serviceKey)return reply(503,{error:'Chưa cấu hình backend tạo nhân viên.'});
+      const usernameMode=typeof data.username==='string';
       if(typeof data.request_id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.request_id)
-       ||typeof data.email!=='string'||typeof data.staff_code!=='string'||typeof data.name!=='string'
-       ||!['phuc_vu','bep'].includes(String(data.role)))return reply(400,{error:'Thông tin nhân viên không hợp lệ.'});
-      const email=data.email.trim().toLowerCase(),name=data.name.trim(),code=data.staff_code.trim().toUpperCase();
-      if(email.length>254||!/^\S+@[^\s@]+\.[^\s@]+$/.test(email)||!name||name.length>100||!/^[A-Z0-9][A-Z0-9_-]{1,31}$/.test(code))return reply(400,{error:'Tên, email hoặc mã nhân viên không hợp lệ.'});
-      const params={p_request_id:data.request_id,p_email:email,p_staff_code:code,p_name:name,p_role:data.role};
+       ||typeof data.name!=='string'||!['phuc_vu','bep'].includes(String(data.role)))return reply(400,{error:'Thông tin nhân viên không hợp lệ.'});
+      const name=data.name.trim(),username=usernameMode?(data.username as string).trim().toLowerCase():'';
+      if(!name||name.length>100||usernameMode&&!/^[a-z0-9][a-z0-9_.-]{2,39}$/.test(username))return reply(400,{error:'Tên hoặc tên đăng nhập không hợp lệ.'});
+      // Giữ đường cũ cho yêu cầu đang chờ từ trước khi đổi giao diện.
+      const email=usernameMode?`${data.request_id}@staff.pos.invalid`:typeof data.email==='string'?data.email.trim().toLowerCase():'';
+      const code=typeof data.staff_code==='string'?data.staff_code.trim().toUpperCase():'';
+      if(!usernameMode&&(email.length>254||!/^\S+@[^\s@]+\.[^\s@]+$/.test(email)||!/^[A-Z0-9][A-Z0-9_-]{1,31}$/.test(code)))return reply(400,{error:'Thông tin yêu cầu cũ không hợp lệ.'});
+      const params=usernameMode?{p_request_id:data.request_id,p_username:username,p_name:name,p_role:data.role}:{p_request_id:data.request_id,p_email:email,p_staff_code:code,p_name:name,p_role:data.role};
       const prepare=async()=>{
-       const result=await fetcher(`${baseUrl}/rest/v1/rpc/prepare_employee_creation`,{
+       const result=await fetcher(`${baseUrl}/rest/v1/rpc/${usernameMode?'prepare_employee_account':'prepare_employee_creation'}`,{
         method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(params),signal:AbortSignal.timeout(10000)
        });
        return {response:result,data:await result.json()};
       };
       const prepared=await prepare();
-      if(!prepared.response.ok)return reply(prepared.response.status===401?401:409,{error:'Không thể giữ yêu cầu. Kiểm tra quyền, mã nhân viên, email và mã yêu cầu.',...(prepared.data?.code==='23505'||prepared.data?.message==='Mã nhân viên đã tồn tại.'?{released:true}:{pending:true})});
+      if(!prepared.response.ok)return reply(prepared.response.status===401?401:409,{error:'Không thể giữ yêu cầu. Kiểm tra quyền, tên đăng nhập và mã yêu cầu.',...(prepared.data?.code==='23505'||['Mã nhân viên đã tồn tại.','Tên đăng nhập đã được sử dụng.'].includes(prepared.data?.message)?{released:true}:{pending:true})});
       if(prepared.data?.completed===true)return reply(200,{ok:true,user_id:prepared.data.user_id,message:'Tài khoản đã được tạo. Nhân viên phải đổi mật khẩu khi đăng nhập.'});
       const cancel=async()=>{
        const response=await fetcher(`${baseUrl}/rest/v1/rpc/cancel_employee_creation`,{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({p_request_id:data.request_id}),signal:AbortSignal.timeout(10000)});
@@ -138,7 +142,7 @@ export function createStaffAdminHandler(settings: Settings) {
        const cancelled=await cancel();
        const result=await cancelled.json();
        if(result.ok||result.pending)return reply(cancelled.status,result);
-       return reply(409,{error:'Auth chưa chấp nhận tài khoản. Kiểm tra email đã tồn tại hoặc chính sách mật khẩu; tài khoản cũ không bị sửa.',released:true});
+       return reply(409,{error:'Auth chưa chấp nhận tài khoản. Kiểm tra tên đăng nhập hoặc chính sách mật khẩu; tài khoản cũ không bị sửa.',released:true});
       }
       return reply(503,{error:'Chưa xác nhận được kết quả. Bấm Kiểm tra lại.',pending:true});
     } catch {

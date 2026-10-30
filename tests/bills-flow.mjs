@@ -57,7 +57,7 @@ const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[]
 async function management(name){
  if(await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).isVisible())await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).click();const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
 async function tableActions(){if(!await page.locator('.table-actions-dialog').evaluate(e=>e.open))await page.getByRole('button',{name:'Thao tác bàn',exact:true}).click();}
-await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
+await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
 await page.getByRole('button',{name:/^Bàn 1 /}).click();await tableActions();await page.getByRole('button',{name:'Tách/gộp bill Bàn 1',exact:true}).click();
 const confirm=page.getByRole('button',{name:'Xác nhận tách/gộp bill',exact:true});assert.equal(await confirm.isDisabled(),true);
 await page.getByRole('checkbox',{name:/Trà đá/}).check();assert.equal(await page.getByLabel('Lý do tách/gộp',{exact:true}).count(),0);await confirm.click();
