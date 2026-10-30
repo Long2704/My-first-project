@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -10,7 +11,7 @@ try{
   const req=route.request(),u=new URL(req.url());let body;
   if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
   else if(u.pathname==='/auth/v1/user')body={id:'test-user',email:'test@example.com'};
-  else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán',role};
+  else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán',role});
   else if(u.pathname==='/rest/v1/menu_items')body=menu;
   else if(u.pathname==='/rest/v1/restaurant_tables')body=tables.filter(t=>t.active);
   else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -39,7 +40,7 @@ try{
  await page.getByRole('button',{name:/^Mang về /}).click();await page.getByRole('button',{name:'Thêm Bún riêu',exact:true}).click();await page.getByLabel('Ghi chú món',{exact:true}).fill('Không hành');await page.getByRole('button',{name:'Gửi bếp',exact:true}).click();await page.getByText('Đã lưu đơn Mang về.',{exact:false}).waitFor();assert.equal(orderCalls[0].p_table_id,13);
  await page.getByRole('button',{name:/^Bếp \(/}).click();await page.getByRole('heading',{name:'Mang về',exact:true}).waitFor();assert.match(await page.locator('.kitchen-card').innerText(),/Không hành/);
  await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.getByRole('button',{name:'Thanh toán Mang về',exact:true}).click();const receipt=page.locator('.payment-dialog');await receipt.getByRole('button',{name:'Xác nhận thu tiền mặt',exact:true}).click();await receipt.getByRole('button',{name:'Thử lại cùng mã',exact:true}).waitFor();
- await page.reload();await page.getByRole('button',{name:'Thử lại cùng mã',exact:true}).click();await page.getByRole('button',{name:'In hóa đơn',exact:true}).waitFor();assert.match(await page.locator('.receipt').innerText(),/Mang về/);assert.equal(payCalls[0].p_request_id,payCalls[1].p_request_id);assert.equal(bills.length,1);await receipt.getByRole('button',{name:'Đóng',exact:true}).click();
+ await page.reload();await page.getByRole('button',{name:'Thử lại cùng mã',exact:true}).click();await page.getByRole('heading',{name:'Hóa đơn đã thanh toán',exact:true}).waitFor();assert.match(await page.locator('.receipt').innerText(),/Mang về/);assert.equal(payCalls[0].p_request_id,payCalls[1].p_request_id);assert.equal(bills.length,1);await receipt.getByRole('button',{name:'Đóng',exact:true}).click();
  assert.equal(await page.locator('.table-card:visible').count(),13);await page.getByRole('button',{name:/^Mang về /}).click();await page.getByRole('button',{name:'Thêm Bún riêu',exact:true}).click();await page.getByRole('button',{name:'Gửi bếp',exact:true}).click();await page.getByText('Đã lưu đơn Mang về.',{exact:false}).waitFor();assert.equal(sessions.length,2);assert.notEqual(sessions[0].id,sessions[1].id);assert.equal(orderCalls[1].p_table_id,13);
  await page.getByRole('button',{name:'Thao tác bàn',exact:true}).click();await page.getByRole('button',{name:'Hủy cả Mang về',exact:true}).click();await page.getByRole('dialog',{name:'Xác nhận hủy Mang về',exact:true}).getByRole('button',{name:'Xác nhận hủy cả bàn',exact:true}).click();await page.getByText('Đã hủy các món chưa thanh toán của Mang về.',{exact:false}).waitFor();
  await page.getByRole('button',{name:'← Danh sách bàn',exact:true}).click();assert.equal(await page.locator('.table-card:visible').count(),13);assert.match(await page.getByRole('button',{name:/^Mang về /}).innerText(),/Trống/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'/workspace/work/fixed-takeaway-mobile.png',fullPage:true});assert.deepEqual(errors,[]);

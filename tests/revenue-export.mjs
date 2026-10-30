@@ -4,13 +4,12 @@ assert.equal(csv([['Bún, riêu "đặc biệt"\nÍt hành',2,58000]]),'\uFEFF"B
 for(const text of ['=1+1',' +SUM(A1:A2)','-1+2','@SUM(A1:A2)','\t=1','\r=1','\n=1'])assert.ok(csv([[text]]).startsWith('\uFEFF"\''));
 assert.equal(csv([[-500,'Bún riêu']]),'\uFEFF"-500","Bún riêu"\r\n');
 const amounts={invoices:2,gross:232000,discount:22000,total:210000,cash:100000,transfer:110000};
-const report={from:'2026-10-27',to:'2026-10-28',generated_at:'2026-10-27T17:30:00Z',...amounts,days:[{day:'2026-10-28',...amounts}],products:[{name:'Bún, riêu "đặc biệt"',qty:4,gross:232000}]};
-const daily=revenueExport(report,'revenue');
+const report={products_complete:true,from:'2026-10-27',to:'2026-10-28',generated_at:'2026-10-27T17:30:00Z',...amounts,days:[{day:'2026-10-28',...amounts}],products:[{name:'Bún, riêu "đặc biệt"',qty:4,gross:232000}]};
+const daily=revenueExport(report);
 assert.equal(daily.filename,'goc-pho-doanh-thu_2026-10-27_2026-10-28.csv');
 assert.match(daily.content,/"Theo ngày","2026-10-28","2","232000","22000","210000","100000","110000"/);
 assert.match(daily.content,/"Tổng cộng","","2","232000","22000","210000","100000","110000"/);
 assert.match(daily.content,/28\/10\/2026/);assert.match(daily.content,/00:30:00/);
-const products=revenueExport(report,'products');assert.match(products.filename,/top-20-mon/);assert.match(products.content,/tối đa 20 món/);assert.match(products.content,/"Bún, riêu ""đặc biệt""","4","232000"/);
-const empty=revenueExport({...report,...Object.fromEntries(Object.keys(amounts).map(k=>[k,0])),days:[],products:[]},'revenue');
+const empty=revenueExport({...report,...Object.fromEntries(Object.keys(amounts).map(k=>[k,0])),days:[],products:[]});
 assert.match(empty.content,/"Tổng cộng","","0","0","0","0","0","0"/);
-console.log('PASS: Vietnamese BOM, CSV commas/quotes/newlines, formula neutralization, numeric amounts, daily totals/discounts/methods, VN timestamp, range filenames, top-20 label and zero report.');
+console.log('PASS: Vietnamese BOM, CSV commas/quotes/newlines, formula neutralization, numeric amounts, daily totals/discounts/methods, VN timestamp, range filenames and zero report; product CSV removed.');

@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -12,7 +13,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu;
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -21,7 +22,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
   const p=req.postDataJSON();reportCalls.push(p);
   if(reportMode==='missing')return route.fulfill({status:404,json:{code:'PGRST202',message:'missing RPC'}});
   if(reportMode==='fail')return route.fulfill({status:400,json:{code:'P0001',message:'denied'}});
-  const empty=reportMode==='empty';body={from:p.p_from,to:p.p_to,generated_at:'2026-10-27T17:00:00Z',invoices:empty?0:2,gross:empty?0:232000,discount:empty?0:22000,total:empty?0:210000,cash:empty?0:100000,transfer:empty?0:110000,days:empty?[]:[{day:p.p_from,invoices:2,gross:232000,discount:22000,total:210000,cash:100000,transfer:110000}],products:empty?[]:[{name:'Bún riêu',qty:4,gross:232000}]};
+  const empty=reportMode==='empty';body={products_complete:reportMode!=='legacy',from:p.p_from,to:p.p_to,generated_at:'2026-10-27T17:00:00Z',invoices:empty?0:2,gross:empty?0:232000,discount:empty?0:22000,total:empty?0:210000,cash:empty?0:100000,transfer:empty?0:110000,days:empty?[]:[{day:p.p_from,invoices:2,gross:232000,discount:22000,total:210000,cash:100000,transfer:110000}],products:empty?[]:[{name:'Bún riêu',qty:4,gross:100000},...Array.from({length:24},(_,i)=>({name:(i%2?'Nước ':'Món phụ ')+String(i+1).padStart(2,'0'),qty:1,gross:5500}))]};
  }
  else if(u.pathname==='/rest/v1/rpc/pay_bill'){
   const p=req.postDataJSON();attempts.push(p);
@@ -54,19 +55,25 @@ await page.getByLabel('Từ ngày',{exact:true}).fill('2026-10-27');await page.g
 const load=page.getByRole('button',{name:'Xem báo cáo',exact:true});await load.click();
 await page.getByText('210.000đ',{exact:true}).first().waitFor();assert.equal(reportCalls.length,1);assert.equal(reportCalls[0].p_from,'2026-10-27');
 assert.match(await page.locator('.report-result').innerText(),/110\.000đ/);assert.match(await page.locator('.report-result').innerText(),/Bún riêu/);
-const exportDaily=page.getByRole('button',{name:'Xuất doanh thu CSV',exact:true}),exportProducts=page.getByRole('button',{name:'Xuất 20 món CSV',exact:true});
+const exportDaily=page.getByRole('button',{name:'Xuất doanh thu CSV',exact:true});
+assert.equal(await page.getByRole('button',{name:'Xuất 20 món CSV',exact:true}).count(),0);
+assert.equal(await page.locator('.report-products tbody tr').count(),25);
+assert.equal(await page.getByRole('heading',{name:'Món ăn',exact:true}).count(),1);
+assert.equal(await page.getByRole('heading',{name:'20 món bán nhiều nhất',exact:true}).count(),0);
+if(process.env.POS_SCREENSHOT_DIR)await page.screenshot({path:process.env.POS_SCREENSHOT_DIR+'/revenue-compact-mobile.png',fullPage:true});
 let downloadPromise=page.waitForEvent('download');await exportDaily.click();let download=await downloadPromise;
 assert.equal(download.suggestedFilename(),'goc-pho-doanh-thu_2026-10-27_2026-10-27.csv');
 const data=readFileSync(await download.path());assert.deepEqual([...data.subarray(0,3)],[239,187,191]);const contents=data.toString('utf8');assert.match(contents,/"232000","22000","210000","100000","110000"/);assert.match(contents,/Tổng cộng/);
-downloadPromise=page.waitForEvent('download');await exportProducts.click();download=await downloadPromise;assert.match(download.suggestedFilename(),/top-20-mon_2026-10-27_2026-10-27/);const productData=readFileSync(await download.path(),'utf8');assert.match(productData,/Bún riêu/);assert.match(productData,/"4","232000"/);assert.equal(reportCalls.length,1);
+assert.equal(reportCalls.length,1);
 await page.getByLabel('Đến ngày',{exact:true}).fill('2026-10-28');await page.getByText('Khoảng ngày đã đổi.',{exact:false}).waitFor();assert.equal(await page.locator('.report-result').count(),0);assert.equal(await exportDaily.count(),0);
 reportMode='empty';await load.click();await page.getByText('Chưa có hóa đơn đã thanh toán trong khoảng ngày này.',{exact:true}).waitFor();
-assert.equal(await exportProducts.isDisabled(),true);downloadPromise=page.waitForEvent('download');await exportDaily.click();download=await downloadPromise;assert.match(readFileSync(await download.path(),'utf8'),/"Tổng cộng","","0","0","0","0","0","0"/);
+assert.equal(await page.getByRole('button',{name:'Xuất 20 món CSV',exact:true}).count(),0);downloadPromise=page.waitForEvent('download');await exportDaily.click();download=await downloadPromise;assert.match(readFileSync(await download.path(),'utf8'),/"Tổng cộng","","0","0","0","0","0","0"/);
+reportMode='legacy';await load.click();await page.getByText('Cần chạy migration 024 để xem đầy đủ món bán trong khoảng ngày.',{exact:true}).waitFor();assert.equal(await page.locator('.report-result').count(),0);
 reportMode='missing';await load.click();await page.getByText('Database chưa có báo cáo doanh thu.',{exact:false}).waitFor();assert.equal(await page.locator('.report-result').count(),0);assert.equal(await exportDaily.count(),0);
 reportMode='fail';await load.click();await page.getByText('Không tải được báo cáo.',{exact:false}).waitFor();
 await page.getByLabel('Từ ngày',{exact:true}).fill('2026-11-01');assert.equal(await load.isDisabled(),true);
 reportMode='ok';await page.getByRole('button',{name:'Tháng này',exact:true}).click();assert.match(await page.getByLabel('Từ ngày',{exact:true}).inputValue(),/-01$/);assert.equal(await load.isDisabled(),false);
 await load.click();await page.locator('.report-result').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Báo cáo doanh thu',exact:true}).count(),0);assert.equal(await exportDaily.count(),0);
-assert.deepEqual(errors,[]);console.log('PASS: CSV downloads/BOM/amounts/range filenames, no extra RPC, empty export, stale/error/role export protection, revenue dates, totals, daily/products, stale result hiding, empty/error/missing migration, date validation, month shortcut, mobile width and service role. Mock Supabase only.');
+assert.deepEqual(errors,[]);console.log('PASS: CSV downloads/BOM/amounts/range filenames, no extra RPC, empty export, stale/error/role export protection, revenue dates, totals, daily/all products beyond 20 and missing-024 guard, stale result hiding, empty/error/missing migration, date validation, month shortcut, mobile width and service role. Mock Supabase only.');
 }finally{await browser.close();}

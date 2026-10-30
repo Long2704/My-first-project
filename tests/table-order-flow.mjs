@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -10,7 +11,7 @@ try{
   const req=route.request(),u=new URL(req.url());let body;
   if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
   else if(u.pathname==='/auth/v1/user')body={id:'test-user',email:'test@example.com'};
-  else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán',role};
+  else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán',role});
   else if(u.pathname==='/rest/v1/menu_items')body=menu;
   else if(u.pathname==='/rest/v1/restaurant_tables'){assert.match(u.searchParams.get('order'),/display_order/);body=tables.filter(t=>t.active);}
   else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
@@ -61,13 +62,13 @@ try{
  async function mouseDrag(from,to){const handle=page.locator(`[data-sort-table="${from}"] .table-drag-handle`),target=page.locator(`[data-sort-table="${to}"]`);await handle.scrollIntoViewIfNeeded();const a=await handle.boundingBox(),b=await target.boundingBox();await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move(b.x+30,b.y+b.height/2,{steps:12});await page.mouse.up();}
  await management();assert.equal(await page.getByRole('button',{name:'Sửa Bàn 1',exact:true}).isDisabled(),true);await mouseDrag(1,3);await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).waitFor();assert.deepEqual((await ids()).slice(0,3),[2,3,1]);assert.equal(orderCalls.length,0);
  await page.getByRole('button',{name:'Hủy sắp xếp',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-sort-table]')?.getAttribute('data-sort-table')==='1');
- const keyboard=page.getByRole('button',{name:'Di chuyển Bàn 2',exact:true});await keyboard.focus();await keyboard.press('ArrowUp');await page.waitForFunction(()=>document.querySelector('[data-sort-table]')?.getAttribute('data-sort-table')==='2');await keyboard.press('ArrowDown');await page.waitForFunction(()=>document.querySelector('[data-sort-table]')?.getAttribute('data-sort-table')==='1');assert.equal(await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).isDisabled(),true);
+ const keyboard=page.getByRole('button',{name:'Di chuyển Bàn 2',exact:true});await keyboard.focus();await keyboard.press('ArrowUp');await page.waitForFunction(()=>document.querySelector('[data-sort-table]')?.getAttribute('data-sort-table')==='2');await keyboard.press('ArrowDown');await page.waitForFunction(()=>document.querySelector('[data-sort-table]')?.getAttribute('data-sort-table')==='1');assert.equal(await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).count(),0);
  // Real browser touch input must drag on the handle rather than scroll the page.
  await page.setViewportSize({width:390,height:844});const handle=page.getByRole('button',{name:'Di chuyển Bàn 1',exact:true});await handle.scrollIntoViewIfNeeded();const a=await handle.boundingBox(),b=await page.locator('[data-sort-table="2"]').boundingBox();const cdp=await context.newCDPSession(page);const x=a.x+a.width/2,y=a.y+a.height/2,targetY=b.y+b.height/2;
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});for(let i=1;i<=8;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+(targetY-y)*i/8,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForFunction(()=>document.querySelector('[data-sort-table]')?.getAttribute('data-sort-table')==='2');
  await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).click();await page.getByRole('button',{name:'Thử lại cùng mã sắp xếp',exact:true}).waitFor();await page.reload();await page.getByRole('button',{name:'Mở quản lý bàn',exact:true}).click();await page.getByRole('button',{name:'Thử lại cùng mã sắp xếp',exact:true}).click();await page.getByText('Đã lưu thứ tự bàn. Màn hình Phục vụ đã cập nhật.',{exact:true}).waitFor();assert.deepEqual(orderCalls[0],orderCalls[1]);assert.equal(ordered.size,1);
  await page.getByRole('button',{name:'Phục vụ',exact:true}).click();assert.match(await page.locator('.table-card:visible').first().innerText(),/^Bàn 2/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await management();await page.screenshot({path:'/workspace/work/table-order-mobile.png',fullPage:true});await mouseDrag(2,3);tables.reverse();await page.getByRole('button',{name:'Lưu thứ tự bàn',exact:true}).click();await page.getByRole('alert').filter({hasText:'Danh sách hoặc thứ tự bàn đã thay đổi.'}).waitFor();assert.equal(await page.getByRole('button',{name:'Thử lại cùng mã sắp xếp',exact:true}).count(),0);assert.deepEqual(await ids(),tables.map(t=>t.id));
- role='thu_ngan';await page.reload();await page.getByRole('button',{name:/^Bàn /}).first().waitFor();await page.locator('.management-menu>summary').click();assert.equal(await page.getByRole('button',{name:'Quản lý bàn',exact:true}).count(),0);assert.deepEqual(errors,[]);
+ role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn /}).first().waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý bàn',exact:true}).count(),0);assert.deepEqual(errors,[]);
  console.log('PASS: mouse drag including busy table, cancel draft, keyboard reorder, real touch drag, explicit save, lost response/reload same-ID retry, service order query/display, stale order conflict, mobile and owner-only controls. Mock Supabase only.');
 }finally{await browser.close();}

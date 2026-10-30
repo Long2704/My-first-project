@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
+import PosIcon from './PosIcon';
 type Props={orders:{id:string}[];ready:boolean;onFreshChange:(ids:string[])=>void;onShowQueue:()=>void};
 const audioConstructor=()=>window.AudioContext??(window as Window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;
 export default function KitchenTools({orders,ready,onFreshChange,onShowQueue}:Props){
@@ -54,11 +55,21 @@ export default function KitchenTools({orders,ready,onFreshChange,onShowQueue}:Pr
   finally{audioLock.current=false;if(alive.current)setAudioBusy(false);}
  }
  function mute(){soundEnabled.current=false;setSound(false);setSoundError('');if(audio.current?.state==='running')void audio.current.suspend().catch(()=>{});}
- return <section className="kitchen-tools" aria-label="Tiện ích bếp"><h2>Theo dõi đơn bếp</h2>
- <div className="kitchen-tool-actions"><button disabled={!soundSupported||audioBusy} aria-pressed={sound} onClick={()=>sound?mute():void enableSound()}>{audioBusy?'Đang bật chuông…':sound?'Tắt chuông đơn mới':'Bật chuông đơn mới'}</button>{sound&&<button onClick={chime}>Thử chuông</button>}
-</div>
- <p role="status">{soundError||(!soundSupported?'Thiết bị chưa hỗ trợ chuông trong trình duyệt.':sound?'Chuông đã bật cho đơn mới nhận khi đang mở Bếp.':'Bấm Bật chuông để nghe âm thử và báo đơn mới. Sau khi tải lại trang cần bật lại chuông.')}</p>
- <p className="sync-status">Giữ trang Bếp mở để nhận cập nhật mỗi 5 giây. Chuyển ứng dụng hoặc khóa máy có thể làm chậm cập nhật và tạm dừng âm thanh.</p>
- {!!fresh.length&&<aside className="new-kitchen-alert" role="status"><strong>Có {fresh.length} đơn bếp mới chưa xem</strong><div className="kitchen-tool-actions"><button onClick={onShowQueue}>Xem đơn đang làm</button><button onClick={()=>setFresh([])}>Đánh dấu đã xem</button></div><p>Đánh dấu đã xem chỉ xóa thông báo; nút Xong trên đơn mới hoàn thành món.</p></aside>}
- </section>;
+ const soundLabel=audioBusy?'Đang bật chuông…':sound?'Tắt chuông đơn mới':'Bật chuông đơn mới';
+ const soundHint=!soundSupported?'Thiết bị chưa hỗ trợ chuông trong trình duyệt.':soundError||soundLabel;
+ return <div className="kitchen-tools" role="group" aria-label="Tiện ích bếp">
+  <button className={`kitchen-bell${soundError?' has-error':''}`} disabled={!soundSupported||audioBusy}
+   aria-label={soundLabel} title={soundHint} aria-pressed={sound} aria-busy={audioBusy}
+   onClick={()=>sound?mute():void enableSound()}>
+   <PosIcon name={sound?'bell':'bellOff'}/>
+  </button>
+  {!!fresh.length&&<div className="new-kitchen-alert" role="status">
+   <button className="kitchen-fresh-count" aria-label={`Có ${fresh.length} đơn bếp mới chưa xem`} title="Xem đơn đang làm" onClick={onShowQueue}>
+    <strong>{fresh.length}</strong> mới
+   </button>
+   <button className="kitchen-acknowledge" aria-label="Đánh dấu đã xem" title="Đánh dấu đã xem" onClick={()=>setFresh([])}><PosIcon name="check"/></button>
+  </div>}
+  <span className="visually-hidden" role="status">{!soundSupported?'Thiết bị chưa hỗ trợ chuông trong trình duyệt.':sound?'Đã bật âm thanh đơn mới.':'Đã tắt âm thanh đơn mới.'}</span>
+  {soundError&&<span className="kitchen-sound-error" role="alert">{soundError}</span>}
+ </div>;
 }

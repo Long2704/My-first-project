@@ -1,3 +1,4 @@
+import {mockAccess} from './support/access.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -12,12 +13,12 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  const req=route.request(),u=new URL(req.url());let body;
  if(u.pathname==='/auth/v1/token')body={access_token:'test-access-token',refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,user:{id:'payment-test-user',email:'test@example.com',aud:'authenticated',role:'authenticated'}};
  else if(u.pathname==='/auth/v1/user')body={id:'payment-test-user',email:'test@example.com'};
- else if(u.pathname==='/rest/v1/profiles')body={name:'Chủ quán kiểm thử',role};
+ else if(u.pathname==='/rest/v1/rpc/get_my_access')body=mockAccess({name:'Chủ quán kiểm thử',role});
  else if(u.pathname==='/rest/v1/menu_items')body=menu.filter(m=>m.is_active);
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
  else if(u.pathname==='/rest/v1/orders')body=sessions.flatMap(s=>s.orders.filter(o=>o.status==='cooking').map(o=>({...o,table_sessions:{table_id:s.table_id,closed_at:s.closed?'2026-10-27':null}})));
- else if(u.pathname==='/rest/v1/audit_log')body=audit;
+ else if(u.pathname==='/rest/v1/audit_log')body=audit.filter(e=>!['table_order','table_update','takeaway_created','takeaway_discarded','menu_update'].includes(e.type));
  else if(u.pathname==='/rest/v1/rpc/list_menu_management')body=menu;
  else if(u.pathname==='/rest/v1/rpc/save_menu_item'){
   const p=req.postDataJSON();menuSaves.push(p);
@@ -61,7 +62,19 @@ async function management(name){const control=page.locator('.management-menu');i
 async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 async function openOrderMenu(){const add=page.getByRole('button',{name:'Thêm món',exact:true});if(await add.isVisible())await add.click();}
 await page.goto('http://localhost:5173');await page.getByLabel('Email',{exact:true}).fill('test@example.com');await page.getByLabel('Mật khẩu',{exact:true}).fill('fake-test-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
-await management('Quản lý thực đơn');await page.getByRole('button',{name:'Thêm món mới',exact:true}).click();
+await management('Quản lý thực đơn');
+await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).waitFor();
+assert.equal(await page.getByRole('button',{name:'Sửa Bún riêu truyền thống',exact:true}).innerText(),'Sửa');
+assert.equal(await page.locator('.workspace-heading small').count(),0);
+assert.equal(await page.locator('.workspace-subtitle').count(),0);
+assert.equal(await page.getByText('Giá mới chỉ áp dụng cho đơn gửi sau khi cập nhật.',{exact:false}).count(),0);
+if(process.env.POS_SCREENSHOT_DIR){
+ await page.screenshot({path:process.env.POS_SCREENSHOT_DIR+'/menu-compact-mobile.png',fullPage:true});
+ await page.setViewportSize({width:1440,height:1000});
+ await page.screenshot({path:process.env.POS_SCREENSHOT_DIR+'/menu-compact-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+}
+await page.getByRole('button',{name:'Thêm món mới',exact:true}).click();
 await page.getByLabel('Tên món',{exact:true}).fill('Nước sâm');await page.getByLabel('Giá bán (đồng)',{exact:true}).fill('-1');
 const save=page.getByRole('button',{name:'Lưu thực đơn',exact:true});assert.equal(await save.isDisabled(),true);
 await page.getByLabel('Giá bán (đồng)',{exact:true}).fill('15000');await page.getByLabel('Nhóm món',{exact:true}).selectOption('do_uong');await save.click();
@@ -86,6 +99,6 @@ await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 // Menu thay đổi ở thiết bị khác: đồng bộ phải khóa giỏ chứa món hết.
 await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await openOrderMenu();await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();menu[0].is_out=true;await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.getByText('Có món đang chọn đã hết hoặc ngừng bán.',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Gửi bếp',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'Xóa chọn',exact:true}).click();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-role='thu_ngan';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
+role='phuc_vu';await page.reload();await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();assert.equal(await page.getByRole('button',{name:'Quản lý thực đơn',exact:true}).count(),0);
 assert.deepEqual(errors,[]);console.log('PASS: menu create/edit validation, durable retry/reload, price/out/stopped/reactivate, stale update rejection, preserved saved order, stale price rejection/recovery, live menu sync, mobile and owner-only controls. Mock Supabase only.');
 }finally{await browser.close();}
