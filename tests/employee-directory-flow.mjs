@@ -50,7 +50,7 @@ try {
   const nav=page.locator('.management-menu');if(!await nav.evaluate(el=>el.open))await nav.locator('summary').click();
   await page.getByRole('button',{name:'Quản lý nhân viên',exact:true}).click();
  }
- await openEmployees();await page.getByRole('heading',{name:'Owner thử nghiệm',exact:true}).waitFor();
+ await openEmployees();await page.getByRole('heading',{name:'Bún Riêu Góc Phố',exact:true}).waitFor();
  assert.equal(calls.length,1);assert.equal(calls[0].p_page_size,20);
  assert.equal(await page.locator('.employee-list article').count(),20);
  assert.equal(await page.getByRole('button',{name:'Thêm nhân viên',exact:true}).count(),1);
@@ -74,14 +74,14 @@ try {
  await page.getByLabel('Tên hoặc tên đăng nhập',{exact:true}).fill('');await page.getByLabel('Vai trò',{exact:true}).selectOption('bep');await page.getByLabel('Trạng thái',{exact:true}).selectOption('locked');await page.getByRole('button',{name:'Tìm',exact:true}).click();
  await page.getByRole('heading',{name:'Bếp thử nghiệm',exact:true}).waitFor();assert.equal(await page.locator('.employee-list article').count(),1);assert.equal(calls.at(-1).p_role,'bep');assert.equal(calls.at(-1).p_active,false);
  await page.getByLabel('Tên hoặc tên đăng nhập',{exact:true}).fill('không tồn tại');await page.getByRole('button',{name:'Tìm',exact:true}).click();await page.getByText('Không có nhân viên phù hợp',{exact:true}).waitFor();
- await page.getByLabel('Tên hoặc tên đăng nhập',{exact:true}).fill('');await page.getByLabel('Vai trò',{exact:true}).selectOption('');await page.getByLabel('Trạng thái',{exact:true}).selectOption('');await page.getByRole('button',{name:'Tìm',exact:true}).click();await page.getByRole('heading',{name:'Owner thử nghiệm',exact:true}).waitFor();
+ await page.getByLabel('Tên hoặc tên đăng nhập',{exact:true}).fill('');await page.getByLabel('Vai trò',{exact:true}).selectOption('');await page.getByLabel('Trạng thái',{exact:true}).selectOption('');await page.getByRole('button',{name:'Tìm',exact:true}).click();await page.getByRole('heading',{name:'Bún Riêu Góc Phố',exact:true}).waitFor();
  for(const [nextMode,expected] of [['missing','Cần chạy SQL 025'],['fail','Không tải được danh sách nhân viên'],['denied','Chỉ Owner đang hoạt động']]){
   mode=nextMode;await page.getByRole('button',{name:'Tải lại nhân viên',exact:true}).click();await page.getByRole('alert').filter({hasText:expected}).waitFor();assert.equal(await page.locator('.employee-list article').count(),0);
-  mode='ok';await page.getByRole('button',{name:'Tải lại nhân viên',exact:true}).click();await page.getByRole('heading',{name:'Owner thử nghiệm',exact:true}).waitFor();
+  mode='ok';await page.getByRole('button',{name:'Tải lại nhân viên',exact:true}).click();await page.getByRole('heading',{name:'Bún Riêu Góc Phố',exact:true}).waitFor();
  }
  // Rời trang rồi mở lại khi request cũ chưa về: kết quả cũ không được ghi đè.
  holdNext=true;await page.getByRole('button',{name:'Tải lại nhân viên',exact:true}).click();await holdStarted;
- await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await openEmployees();await page.getByRole('heading',{name:'Owner thử nghiệm',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await openEmployees();await page.getByRole('heading',{name:'Bún Riêu Góc Phố',exact:true}).waitFor();
  releaseOld();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  assert.equal(await page.getByRole('heading',{name:'Kết quả cũ',exact:true}).count(),0);
  active=false;await page.getByRole('button',{name:'Đồng bộ',exact:true}).click();await page.getByRole('alert').filter({hasText:'Tài khoản đã bị khóa.'}).waitFor();assert.equal(await page.locator('.employee-list').count(),0);

@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:ordered-table-menu": "node tests/ordered-table-menu-flow.mjs",
+    "test:ordered-table-menu": "node tests/pos-reference-flow.mjs",
     "test:browser": "node tests/order-flow.mjs",
     "test:sql": "node tests/payment-sql.mjs",
     "test:payments": "node tests/payment-flow.mjs",
@@ -23,7 +23,7 @@
     "test:bills": "node tests/bills-sql.mjs",
     "test:bills-ui": "node tests/bills-flow.mjs",
     "test:kitchen-tools": "node tests/kitchen-tools-flow.mjs",
-    "test:layout": "node tests/layout-flow.mjs",
+    "test:layout": "node tests/pos-reference-flow.mjs",
     "test:table-actions": "node tests/table-actions-flow.mjs",
     "test:takeaway-ui": "node tests/takeaway-flow.mjs",
     "test:table-management-ui": "node tests/table-management-flow.mjs",
@@ -55,7 +55,8 @@
     "test:password-reset-ui": "node tests/employee-password-reset-flow.mjs",
     "test:auth-provisioning": "node tests/auth-profile-provisioning-sql.mjs",
     "test:employee-deletion": "node tests/employee-deletion-sql.mjs && node tests/staff-admin-deletion.mjs",
-    "test:employee-deletion-ui": "node tests/employee-deletion-flow.mjs"
+    "test:employee-deletion-ui": "node tests/employee-deletion-flow.mjs",
+    "test:pos-reference": "node tests/pos-reference-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

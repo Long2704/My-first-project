@@ -16,7 +16,7 @@ export default function MenuPanel({userId,disabled,onPending,onSaved,active}:{us
  const valid=!!edit&&edit.name.trim().length>0&&edit.name.trim().length<=120&&Number.isSafeInteger(integer(edit.price))&&integer(edit.price)<=10000000&&Number.isSafeInteger(integer(edit.sort))&&integer(edit.sort)<=9999;
  async function readMenu(){
   const r=await supabase!.rpc('list_menu_management');
-  if(r.error)throw new Error(['PGRST202','42883'].includes(r.error.code)?'Database chưa có quản lý thực đơn. Cần chạy migration 008_menu_management.sql.':'Không tải được thực đơn quản lý. Kiểm tra quyền chủ quán và kết nối.');
+  if(r.error)throw new Error(['PGRST202','42883'].includes(r.error.code)?'Database chưa có quản lý thực đơn. Cần chạy migration 008_menu_management.sql.':'Không tải được thực đơn quản lý. Kiểm tra quyền Bún Riêu Góc Phố và kết nối.');
   if(alive.current)setItems(r.data as MenuItem[]);
  }
  async function load(){if(!supabase||lock.current)return;lock.current=true;setBusy(true);setOpen(true);setError('');try{await readMenu();}catch(e){if(alive.current)setError(e instanceof Error?e.message:'Không tải được thực đơn.');}finally{lock.current=false;if(alive.current)setBusy(false);}}

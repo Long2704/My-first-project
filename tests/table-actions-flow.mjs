@@ -83,9 +83,9 @@ await page.getByRole('button',{name:'Tách/gộp bill Bàn 2',exact:true}).click
 await page.getByRole('button',{name:'Chọn tất cả dòng',exact:true}).click();await page.getByRole('button',{name:'Xác nhận tách/gộp bill',exact:true}).click();await page.getByText('Đã chuyển 2 dòng món từ Bill 1 sang Bill 3',{exact:false}).waitFor();assert.equal(billRequests.length,1);
 await page.screenshot({path:'/workspace/work/table-actions-mobile.png'});
 assert.equal(await page.locator('.table-actions-dialog').evaluate(e=>e.scrollWidth<=e.clientWidth),true);
-await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).click();await page.getByRole('button',{name:/^Bếp \(/}).click();
+await page.getByRole('button',{name:'Đóng thao tác bàn',exact:true}).click();await page.getByRole('button',{name:'Quay lại danh sách bàn',exact:true}).click();await page.getByRole('button',{name:/^Bếp \(/}).click();
 await page.getByRole('heading',{name:'Bàn 1 → Bàn 2',exact:true}).waitFor();await page.getByRole('heading',{name:'Bàn 2',exact:true}).waitFor();
-await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await tableActions();await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'/workspace/work/table-actions-desktop.png'});
+await page.getByRole('button',{name:'Phục vụ',exact:true}).click();await page.getByRole('button',{name:/^Bàn 2 /}).click();await tableActions();await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'/workspace/work/table-actions-desktop.png'});
 await page.keyboard.press('Escape');assert.equal(await page.locator('.table-actions-dialog').evaluate(e=>e.open),false);
 assert.deepEqual(errors,[]);console.log('PASS: icon opens table-actions modal, occupied target labeled/selectable, merge request snapshot, lost-response reload retry, bill split without reason, distinct kitchen routes, mobile overflow and Escape dismissal. Mock Supabase only.');
 }finally{await browser.close();}
