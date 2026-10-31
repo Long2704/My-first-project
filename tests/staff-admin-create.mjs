@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createStaffAdminHandler} from '../supabase/functions/staff-admin/index.ts';
 const base='https://example.supabase.co',secret='mock-server-secret',publicKey='mock-public';
-const draft={action:'create_employee',request_id:'90000000-0000-0000-0000-000000000001',name:'Nhân viên',staff_code:'NV01',email:'new@example.test',role:'phuc_vu',password:'temporary-only-123'};
+const draft={action:'create_employee',request_id:'90000000-0000-0000-0000-000000000001',name:'Nhân viên',staff_code:'NV01',email:'new@example.test',role:'phuc_vu',password:'Temp123!'};
 function fixture(mode='ok',role='chu'){
  let completed=false,adminCalls=0;const bodies=[];
  const handler=createStaffAdminHandler({supabaseUrl:base,publicKey,serviceKey:secret,fetcher:async(url,init)=>{
@@ -34,4 +34,6 @@ assert.equal((await fixture().send({...draft,password:'short'})).status,400);
 const check=fixture();assert.equal((await check.send({...draft,action:'check_creation',password:undefined})).pending,true);assert.equal(check.count(),0);
 assert.equal((await check.send({...draft,action:'cancel_creation',password:undefined})).released,true);
 const usernameFixture=fixture();const usernameInput={...draft,username:'bep01',role:'bep'};delete usernameInput.email;delete usernameInput.staff_code;assert.equal((await usernameFixture.send(usernameInput)).ok,true);assert.equal(usernameFixture.bodies[0].email,draft.request_id+'@staff.pos.invalid');
+for(const password of ['Ab12!x','Abcd1234!xyz'])assert.equal((await fixture().send({...draft,password})).ok,true);
+for(const password of ['Ab1!x','Abcd1234!xyzz'])assert.equal((await fixture().send({...draft,password})).status,400);
 console.log('ĐẠT Edge tạo nhân viên: Owner, chặn Kitchen/Waiter/khóa/nâng quyền, retry không tạo trùng, mất phản hồi phục hồi, không reset email cũ, không lộ mật khẩu/key. Fetch giả lập.');

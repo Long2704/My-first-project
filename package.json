@@ -53,7 +53,9 @@
     "test:staff-login": "node tests/staff-login.mjs",
     "test:password-reset": "node tests/employee-password-reset-sql.mjs && node tests/staff-admin-password-reset.mjs",
     "test:password-reset-ui": "node tests/employee-password-reset-flow.mjs",
-    "test:auth-provisioning": "node tests/auth-profile-provisioning-sql.mjs"
+    "test:auth-provisioning": "node tests/auth-profile-provisioning-sql.mjs",
+    "test:employee-deletion": "node tests/employee-deletion-sql.mjs && node tests/staff-admin-deletion.mjs",
+    "test:employee-deletion-ui": "node tests/employee-deletion-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

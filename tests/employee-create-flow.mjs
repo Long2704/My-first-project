@@ -14,7 +14,7 @@ try{
   else if(path==='/functions/v1/staff-admin'){
    const input=route.request().postDataJSON();calls.push(input);
    if(input.action==='create_employee'){
-    assert.ok(['phuc_vu','bep'].includes(input.role));assert.ok(input.password.length>=12);
+    assert.ok(['phuc_vu','bep'].includes(input.role));assert.ok(input.password.length>=6&&input.password.length<=12);
     if(mode==='reject')return route.fulfill({status:409,json:{error:'Email đã tồn tại.',released:true}});
     completed=true;
     return route.fulfill({status:503,json:{error:'Chưa xác nhận kết quả.',pending:true}});
@@ -30,14 +30,14 @@ try{
  await employees();await page.getByRole('button',{name:'Thêm nhân viên',exact:true}).click();
  await page.locator('.employee-create').getByLabel('Tên nhân viên',{exact:true}).fill('Bếp mới');await page.locator('.employee-create').getByLabel('Tên đăng nhập',{exact:true}).fill('nv-k02');await page.locator('.employee-create').getByLabel('Vai trò nhân viên',{exact:true}).selectOption('bep');
  assert.equal(await page.locator('.employee-create').getByLabel('Vai trò nhân viên').locator('option').count(),2);
- await page.locator('.employee-create').getByLabel('Mật khẩu tạm',{exact:true}).fill('temporary-test-123');await page.getByRole('button',{name:'Tạo tài khoản',exact:true}).click();
+ await page.locator('.employee-create').getByLabel('Mật khẩu tạm',{exact:true}).fill('Temp123!');await page.getByRole('button',{name:'Tạo tài khoản',exact:true}).click();
  await page.getByText('Chưa xác nhận kết quả.',{exact:true}).waitFor();assert.equal(await page.locator('.employee-create').getByLabel('Mật khẩu tạm',{exact:true}).inputValue(),'');
- const storage=await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}));assert.ok(!storage.includes('temporary-test-123'));
+ const storage=await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}));assert.ok(!storage.includes('Temp123!'));
  assert.equal(await page.locator('.employee-create').getByLabel('Tên nhân viên',{exact:true}).isDisabled(),true);
  await page.reload();await employees();await page.getByRole('button',{name:'Kiểm tra lại',exact:true}).click();await page.getByText(/Đã tạo nhân viên\. Cấp tên đăng nhập/).waitFor();
  assert.equal(calls.length,2);assert.equal(calls[0].role,'bep');assert.equal(calls[0].request_id,calls[1].request_id);assert.equal(calls[0].username,'nv-k02');
  assert.equal(await page.evaluate(()=>localStorage.getItem('pos:employee-create:owner')),null);
- mode='reject';await page.getByRole('button',{name:'Thêm nhân viên',exact:true}).click();await page.locator('.employee-create').getByLabel('Tên nhân viên',{exact:true}).fill('Bếp khác');await page.locator('.employee-create').getByLabel('Tên đăng nhập',{exact:true}).fill('NV03');await page.locator('.employee-create').getByLabel('Mật khẩu tạm',{exact:true}).fill('temporary-test-456');await page.getByRole('button',{name:'Tạo tài khoản',exact:true}).click();await page.getByText('Email đã tồn tại.',{exact:true}).waitFor();assert.equal(await page.locator('.employee-create').getByLabel('Tên nhân viên',{exact:true}).isDisabled(),false);
+ mode='reject';await page.getByRole('button',{name:'Thêm nhân viên',exact:true}).click();await page.locator('.employee-create').getByLabel('Tên nhân viên',{exact:true}).fill('Bếp khác');await page.locator('.employee-create').getByLabel('Tên đăng nhập',{exact:true}).fill('NV03');await page.locator('.employee-create').getByLabel('Mật khẩu tạm',{exact:true}).fill('Temp456!');await page.getByRole('button',{name:'Tạo tài khoản',exact:true}).click();await page.getByText('Email đã tồn tại.',{exact:true}).waitFor();assert.equal(await page.locator('.employee-create').getByLabel('Tên nhân viên',{exact:true}).isDisabled(),false);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:'/workspace/artifacts/employee-create-mobile.png'});
  console.log('ĐẠT UI: Owner tạo Kitchen, chỉ hai vai trò, mất phản hồi/tải lại khôi phục cùng mã không lưu mật khẩu; kiểm tra lại không gửi mật khẩu; lỗi email mở lại form, mobile không tràn. API giả lập.');

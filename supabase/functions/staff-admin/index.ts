@@ -93,6 +93,35 @@ export function createStaffAdminHandler(settings: Settings) {
       if (!input || typeof input !== 'object' || Array.isArray(input)) return reply(400,{error:'Yêu cầu không hợp lệ.'});
       const data=input as Record<string,unknown>;
       if(data.action==='check_access')return reply(200,{ok:true,message:'Owner đã được xác thực và có quyền quản lý nhân viên.'});
+      if(['delete_employee','check_employee_deletion'].includes(String(data.action))){
+       const uuid=(v:unknown)=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+       if(!uuid(data.employee_id)||data.request_id!==undefined&&!uuid(data.request_id))return reply(400,{error:'Yêu cầu xóa không hợp lệ.'});
+       if(!settings.serviceKey)return reply(503,{error:'Backend xóa tài khoản chưa sẵn sàng.'});
+       const rpc=async(name:string,body:unknown,admin=false)=>{
+        const response=await fetcher(`${baseUrl}/rest/v1/rpc/${name}`,{method:'POST',headers:admin?{apikey:settings.serviceKey!,Authorization:`Bearer ${settings.serviceKey}`,'Content-Type':'application/json'}:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
+        return {response,data:await response.json()};
+       };
+       if(data.action==='check_employee_deletion'){
+        const status=await rpc('get_employee_deletion',{p_employee_id:data.employee_id,p_request_id:data.request_id??null});
+        if(!status.response.ok)return reply(403,{error:'Chưa đọc được yêu cầu xóa.'});
+        if(status.data&&!status.data.completed){
+         const finish=await rpc('finish_employee_deletion',{p_request_id:status.data.request_id,p_owner_id:user.id},true);
+         if(finish.response.ok&&finish.data?.completed)return reply(200,{ok:true,deletion:{...status.data,completed:true}});
+        }
+        return reply(200,{ok:true,deletion:status.data});
+       }
+       if(data.confirmed!==true||!uuid(data.request_id)||!Number.isInteger(data.expected_version)||(data.expected_version as number)<1)return reply(400,{error:'Cần xác nhận xóa đúng tài khoản.'});
+       const prepared=await rpc('begin_employee_deletion',{p_request_id:data.request_id,p_employee_id:data.employee_id,p_expected_version:data.expected_version});
+       if(!prepared.response.ok)return reply(409,{error:'Chưa bắt đầu xóa. Tải lại danh sách; không xóa Owner hoặc nhân viên đang đặt lại mật khẩu.'});
+       if(prepared.data?.completed)return reply(200,{ok:true,completed:true});
+       if(prepared.data?.conflict)return reply(409,{error:'Đã có yêu cầu xóa. Bấm Kiểm tra lại.',pending:true,deletion:prepared.data});
+       let removed:Response;
+       try{removed=await fetcher(`${baseUrl}/auth/v1/admin/users/${data.employee_id}`,{method:'DELETE',headers:{apikey:settings.serviceKey,Authorization:`Bearer ${settings.serviceKey}`,'Content-Type':'application/json'},body:JSON.stringify({should_soft_delete:true}),signal:AbortSignal.timeout(15000)});}
+       catch{return reply(503,{error:'Chưa xác nhận kết quả xóa. Tài khoản vẫn bị chặn; bấm Kiểm tra lại.',pending:true});}
+       const finish=await rpc('finish_employee_deletion',{p_request_id:data.request_id,p_owner_id:user.id},true);
+       if(finish.response.ok&&finish.data?.completed)return reply(200,{ok:true,completed:true});
+       return reply(removed.ok?503:409,{error:'Chưa xác nhận xóa tài khoản. Bấm Kiểm tra lại; không xóa dữ liệu thủ công.',pending:true});
+      }
       if(['reset_password','check_password_reset'].includes(String(data.action))){
        const uuid=(value:unknown)=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
        if(!uuid(data.employee_id)||data.request_id!==undefined&&!uuid(data.request_id))return reply(400,{error:'Yêu cầu đặt lại không hợp lệ.'});
@@ -106,7 +135,7 @@ export function createStaffAdminHandler(settings: Settings) {
         return reply(200,{ok:true,reset:status.data});
        }
        if(!settings.serviceKey)return reply(503,{error:'Backend đặt lại chưa sẵn sàng.'});
-       if(!uuid(data.request_id)||!Number.isInteger(data.expected_version)||(data.expected_version as number)<1||typeof data.password!=='string'||data.password.length<12||data.password.length>128)return reply(400,{error:'Mật khẩu tạm cần 12–128 ký tự và yêu cầu phải hợp lệ.'});
+       if(!uuid(data.request_id)||!Number.isInteger(data.expected_version)||(data.expected_version as number)<1||typeof data.password!=='string'||data.password.length<6||data.password.length>12)return reply(400,{error:'Mật khẩu tạm cần 6–12 ký tự và yêu cầu phải hợp lệ.'});
        const prepared=await rpc('begin_employee_password_reset',{p_request_id:data.request_id,p_employee_id:data.employee_id,p_expected_version:data.expected_version});
        if(!prepared.response.ok)return reply(409,{error:'Không bắt đầu được đặt lại. Kiểm tra quyền và tải lại danh sách nhân viên.'});
        if(prepared.data?.completed===true)return reply(200,{ok:true,completed:true});
@@ -158,7 +187,7 @@ export function createStaffAdminHandler(settings: Settings) {
       };
       if(data.action==='cancel_creation')return await cancel();
       if(data.action==='check_creation')return reply(200,{ok:false,pending:true,message:'Chưa xác nhận đã tạo. Nhập lại mật khẩu tạm và thử lại cùng yêu cầu.'});
-      if(typeof data.password!=='string'||data.password.length<12||data.password.length>128)return reply(400,{error:'Mật khẩu tạm cần từ 12 đến 128 ký tự.',pending:true});
+      if(typeof data.password!=='string'||data.password.length<6||data.password.length>12)return reply(400,{error:'Mật khẩu tạm cần từ 6 đến 12 ký tự.',pending:true});
       // Service key chỉ dùng ở server. Không chuyển role/metadata tùy ý từ client.
       let created:Response;
       try{

@@ -29,17 +29,17 @@ try{
   await page.getByLabel('Tên đăng nhập',{exact:true}).fill(user.email);await page.getByLabel('Mật khẩu',{exact:true}).fill('temporary-test-only');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
   await page.getByRole('heading',{name:'Đặt mật khẩu riêng'}).waitFor();assert.equal(reads,0);assert.equal(await page.getByRole('button',{name:'Phục vụ',exact:true}).count(),0);
   await page.reload();await page.getByRole('heading',{name:'Đặt mật khẩu riêng'}).waitFor();
-  await page.getByLabel('Mật khẩu mới',{exact:true}).fill('new-private-test-123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('not-matching');assert.equal(await page.getByRole('button',{name:'Lưu mật khẩu mới'}).isDisabled(),true);
-  await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('new-private-test-123');
+  await page.getByLabel('Mật khẩu mới',{exact:true}).fill('New123!');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('not-matching');assert.equal(await page.getByRole('button',{name:'Lưu mật khẩu mới'}).isDisabled(),true);
+  await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('New123!');
   if(mode==='success')await page.screenshot({path:'/workspace/artifacts/initial-password-mobile.png'});
   await page.getByRole('button',{name:'Lưu mật khẩu mới'}).click();
   if(mode==='rejected'){
    await page.getByRole('alert').filter({hasText:'Mật khẩu chưa được chấp nhận'}).waitFor();assert.equal(pending,true);assert.equal(reads,0);
-   await page.getByLabel('Mật khẩu mới',{exact:true}).fill('another-private-test-123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('another-private-test-123');await page.getByRole('button',{name:'Lưu mật khẩu mới'}).click();
+   await page.getByLabel('Mật khẩu mới',{exact:true}).fill('Other123!');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('Other123!');await page.getByRole('button',{name:'Lưu mật khẩu mới'}).click();
   }
   if(mode==='uncertain'){await page.getByRole('button',{name:'Kiểm tra lại',exact:true}).click();}
   await page.getByRole('button',{name:/^Bàn thử 1 /}).waitFor();assert.equal(updates,mode==='rejected'?2:1);
-  const stored=await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}));assert.ok(!stored.includes('new-private-test-123'));assert.ok(!stored.includes('temporary-test-only'));
+  const stored=await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}));assert.ok(!stored.includes('New123!'));assert.ok(!stored.includes('temporary-test-only'));
   await context.close();
  }
  console.log('ĐẠT UI: chặn POS trước đổi mật khẩu, tải lại vẫn chặn, xác nhận khớp, Auth từ chối/thành công, mất phản hồi kiểm tra lại không đổi lần hai; không lưu mật khẩu trong storage. API giả lập.');

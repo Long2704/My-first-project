@@ -6,7 +6,7 @@ export default function InitialPasswordSetup({onCompleted,onBusy}:{onCompleted:(
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[verificationPending,setVerificationPending]=useState(false);
  const lock=useRef(false),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;onBusy(false);};},[onBusy]);
- const valid=password.length>=12&&password===confirm;
+ const valid=password.length>=6&&password.length<=12&&password===confirm;
 
  async function verify(){
   let result;
@@ -47,9 +47,9 @@ export default function InitialPasswordSetup({onCompleted,onBusy}:{onCompleted:(
  return <div className="login-shell"><form className="initial-password-form" onSubmit={e=>{e.preventDefault();void submit(verificationPending);}}>
   <h2>Đặt mật khẩu riêng</h2><p>Đổi mật khẩu tạm trước khi sử dụng POS.</p>
   {!verificationPending&&<fieldset disabled={busy}>
-   <label>Mật khẩu mới<input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={e=>setPassword(e.target.value)}/></label>
-   <label>Nhập lại mật khẩu<input type="password" autoComplete="new-password" minLength={12} required value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>
-   <small>Ít nhất 12 ký tự. Không dùng lại mật khẩu tạm.</small>
+   <label>Mật khẩu mới<input type="password" autoComplete="new-password" minLength={6} maxLength={12} required value={password} onChange={e=>setPassword(e.target.value)}/></label>
+   <label>Nhập lại mật khẩu<input type="password" autoComplete="new-password" minLength={6} maxLength={12} required value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>
+   <small>Từ 6 đến 12 ký tự. Không dùng lại mật khẩu tạm.</small>
    {!!confirm&&password!==confirm&&<p role="alert">Hai mật khẩu chưa khớp.</p>}
   </fieldset>}
   {error&&<p role="alert">{error}</p>}

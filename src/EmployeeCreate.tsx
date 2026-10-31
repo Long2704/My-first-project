@@ -41,8 +41,8 @@ export default function EmployeeCreate({userId,onCreated}:{userId:string;onCreat
     <label>Tên đăng nhập<input required pattern="[A-Za-z0-9][A-Za-z0-9_.-]{2,39}" autoCapitalize="none" autoComplete="off" spellCheck={false} maxLength={40} value={draft?.username??(draft?'Yêu cầu cũ':username)} onChange={e=>setUsername(e.target.value)}/></label>
     <label>Vai trò nhân viên<select aria-label="Vai trò nhân viên" value={draft?.role??role} onChange={e=>setRole(e.target.value)}><option value="phuc_vu">Waiter — Phục vụ</option><option value="bep">Kitchen — Bếp</option></select></label>
    </fieldset>
-   <label>Mật khẩu tạm<input type="password" autoComplete="new-password" required minLength={12} maxLength={128} disabled={busy} value={password} onChange={e=>setPassword(e.target.value)}/></label>
-   <small>12–128 ký tự. Nhân viên phải đổi khi đăng nhập lần đầu.</small>
+   <label>Mật khẩu tạm<input type="password" autoComplete="new-password" required minLength={6} maxLength={12} disabled={busy} value={password} onChange={e=>setPassword(e.target.value)}/></label>
+   <small>6–12 ký tự. Nhân viên phải đổi khi đăng nhập lần đầu.</small>
    <div className="employee-create-actions"><button className="primary" type="submit" disabled={busy}>{busy?'Đang xử lý…':draft?'Thử lại cùng yêu cầu':'Tạo tài khoản'}</button>
    {draft?<><button type="button" disabled={busy} onClick={()=>void send(true)}>Kiểm tra lại</button><button type="button" disabled={busy} onClick={()=>void send(true,true)}>Hủy yêu cầu</button></>:<button type="button" disabled={busy} onClick={()=>{setPassword('');setOpen(false);}}>Đóng</button>}</div>
   </form>}

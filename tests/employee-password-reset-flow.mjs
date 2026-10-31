@@ -17,7 +17,7 @@ try{
    const input=route.request().postDataJSON();calls.push(input);
    if(input.action==='check_password_reset')body={ok:true,reset:input.request_id?reset:reset?.completed?null:reset};
    else{
-    assert.equal(input.action,'reset_password');assert.ok(input.password.length>=12);
+    assert.equal(input.action,'reset_password');assert.ok(input.password.length>=6&&input.password.length<=12);
     if(reset&&!reset.completed)assert.equal(input.request_id,reset.request_id);
     reset={request_id:input.request_id,employee_id:employee.id,expected_version:input.expected_version,completed:mode!=='pending'};
     employee.password_reset_pending=!reset.completed;employee.is_active=reset.completed;employee.staff_version++;
@@ -32,14 +32,14 @@ try{
  async function openList(){await page.locator('.management-menu summary').click();await page.getByRole('button',{name:'Quản lý nhân viên',exact:true}).click();await page.getByRole('heading',{name:'Nhân viên',exact:true}).waitFor();}
  await openList();assert.equal(await page.getByRole('button',{name:'Đặt lại mật khẩu Owner',exact:true}).count(),0);
  await page.getByRole('button',{name:'Đặt lại mật khẩu Nhân viên',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Đặt lại mật khẩu nhân viên',exact:true});await dialog.waitFor();
- await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).fill('first-temporary-123');await dialog.getByRole('button',{name:'Xác nhận đặt lại',exact:true}).click();await dialog.getByText('Chưa xác nhận được kết quả.',{exact:true}).waitFor();
+ await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).fill('First123!');await dialog.getByRole('button',{name:'Xác nhận đặt lại',exact:true}).click();await dialog.getByText('Chưa xác nhận được kết quả.',{exact:true}).waitFor();
  assert.equal(await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).inputValue(),'');
- assert.ok(!(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).includes('first-temporary-123'));
+ assert.ok(!(await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}))).includes('First123!'));
  await page.reload();await openList();await dialog.waitFor({state:'hidden'});await page.getByText(/Đã đặt lại mật khẩu\. Cấp mật khẩu tạm/).waitFor();assert.equal(calls.filter(c=>c.action==='reset_password').length,1);
- mode='pending';await page.getByRole('button',{name:'Đặt lại mật khẩu Nhân viên',exact:true}).click();await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).fill('second-temporary-123');await dialog.getByRole('button',{name:'Xác nhận đặt lại',exact:true}).click();await dialog.getByText('Chưa xác nhận được kết quả.',{exact:true}).waitFor();
+ mode='pending';await page.getByRole('button',{name:'Đặt lại mật khẩu Nhân viên',exact:true}).click();await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).fill('Second123!');await dialog.getByRole('button',{name:'Xác nhận đặt lại',exact:true}).click();await dialog.getByText('Chưa xác nhận được kết quả.',{exact:true}).waitFor();
  assert.equal(await page.getByRole('button',{name:'Sửa nhân viên Nhân viên',exact:true}).isDisabled(),true);
  await dialog.getByRole('button',{name:'Kiểm tra lại',exact:true}).click();await dialog.getByText(/Yêu cầu chưa hoàn tất/).waitFor();
- mode='ok';await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).fill('different-temporary-123');await page.screenshot({path:'/workspace/artifacts/password-reset-mobile.png'});await dialog.getByRole('button',{name:'Tiếp tục đặt lại',exact:true}).click();await dialog.waitFor({state:'hidden'});
+ mode='ok';await dialog.getByLabel('Mật khẩu tạm mới',{exact:true}).fill('Other456!');await page.screenshot({path:'/workspace/artifacts/password-reset-mobile.png'});await dialog.getByRole('button',{name:'Tiếp tục đặt lại',exact:true}).click();await dialog.waitFor({state:'hidden'});
  const updates=calls.filter(c=>c.action==='reset_password');assert.equal(updates[1].request_id,updates[2].request_id);assert.notEqual(updates[1].password,updates[2].password);
  assert.equal(await page.evaluate(()=>localStorage.getItem('pos:password-reset:owner')),null);
  console.log('ĐẠT UI reset: Owner bảo vệ, xác nhận, không lưu mật khẩu, mất phản hồi/tải lại kiểm tra hoàn tất không reset hai lần, pending khóa sửa, nhập mật khẩu khác tiếp tục cùng yêu cầu. API giả lập.');
