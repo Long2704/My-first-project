@@ -3,7 +3,7 @@ import {supabase} from './supabase';
 import {downloadCsv,revenueExport} from './revenue-export';
 import type {RevenueReport as Report} from './revenue-export';
 import PosIcon from './PosIcon';
-const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
+import {formatMoney as money} from './format';
 const dateLabel=(value:string)=>value.split('-').reverse().join('/');
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export default function RevenuePanel({active}:{active?:boolean}){

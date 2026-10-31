@@ -58,7 +58,8 @@
     "test:employee-deletion-ui": "node tests/employee-deletion-flow.mjs",
     "test:pos-reference": "node tests/pos-reference-flow.mjs",
     "test:pwa": "npm run build && node tests/pwa-flow.mjs",
-    "test:password-recovery-ui": "node tests/password-recovery-errors.mjs && node tests/password-recovery-flow.mjs"
+    "test:password-recovery-ui": "node tests/password-recovery-errors.mjs && node tests/password-recovery-flow.mjs",
+    "test:frontend-performance": "node tests/frontend-performance-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

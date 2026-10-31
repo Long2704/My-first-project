@@ -35,9 +35,10 @@ try{
  assert.equal(await page.evaluate(()=>window.installCalls),0);await page.getByRole('button',{name:'Cài app',exact:true}).click();assert.equal(await page.evaluate(()=>window.installCalls),1);
  await page.evaluate(()=>{window.keepWorking='draft-not-reloaded';});
  const second=await context.newPage();await second.goto('http://localhost:4180/');await second.evaluate(()=>navigator.serviceWorker.ready);
+ const vendor=b.files.find(path=>/\/vendor-.*\.js$/.test(path));assert.ok(vendor);const vendorRequests=requests.filter(path=>path===vendor).length;
  directory='b';await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration();await registration.update();});
  await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration())?.waiting);
- await page.getByText('Có bản cập nhật mới',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.keepWorking),'draft-not-reloaded');
+ await page.getByText('Có bản cập nhật mới',{exact:true}).waitFor();assert.equal(requests.filter(path=>path===vendor).length,vendorRequests,'Unchanged hashed vendor should be reused from the previous static cache');assert.equal(await page.evaluate(()=>window.keepWorking),'draft-not-reloaded');
  const version=await page.evaluate(async()=>{const channel=new MessageChannel();const received=new Promise(resolve=>channel.port1.onmessage=event=>resolve(event.data.version));navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'},[channel.port2]);return received;});assert.equal(version,a.version);
  await page.close();assert.equal(await second.evaluate(()=>navigator.serviceWorker.controller.state),'activated');
  const source=await readFile('dist/sw.js','utf8');assert.ok(!source.includes('skipWaiting('));assert.ok(!source.includes('backgroundsync'));assert.ok(source.includes("url.origin!==self.location.origin"));assert.ok(source.includes("request.headers.has('authorization')"));

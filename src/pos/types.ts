@@ -20,10 +20,15 @@ export type DraftLine = {
     note: string;
 };
 export const categories: Category[] = [{ id: 'all', name: 'Tất cả' }, { id: 'bun', name: 'Món chính' }, { id: 'an_them', name: 'Món thêm' }, { id: 'do_uong', name: 'Đồ uống' }];
-export const formatMoney = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+export {formatMoney} from '../format';
 export const draftAmount = (lines: DraftLine[]) => lines.reduce((sum, line) => sum + line.product.price * line.qty, 0);
+const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase('vi-VN');
+const searchNames = new WeakMap<Product,{name:string;normalized:string}>();
+function searchableName(product:Product){
+ const cached=searchNames.get(product);if(cached?.name===product.name)return cached.normalized;
+ const normalized=normalize(product.name);searchNames.set(product,{name:product.name,normalized});return normalized;
+}
 export function searchProducts(products: Product[], category: string, query: string) {
-    const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase('vi-VN');
     const needle = normalize(query.trim());
-    return products.filter(p => !p.is_out && (category === 'all' || p.category === category) && normalize(p.name).includes(needle));
+    return products.filter(p => !p.is_out && (category === 'all' || p.category === category) && searchableName(p).includes(needle));
 }
