@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {passwordRecoveryError,uncertainPasswordChange} from '../src/password-recovery-error.ts';
+assert.match(passwordRecoveryError({name:'AuthSessionMissingError',status:400}),/Phiên khôi phục đã hết.*session_not_found/);
+assert.match(passwordRecoveryError({code:'same_password',status:422}),/trùng mật khẩu hiện tại/);
+assert.match(passwordRecoveryError({code:'reauthentication_needed',status:400}),/xác thực lại/);
+assert.match(passwordRecoveryError({code:'session_not_found',status:400}),/Phiên khôi phục đã hết/);
+assert.match(passwordRecoveryError({code:'weak_password',status:422,reasons:['pwned']}),/từng bị lộ/);
+assert.match(passwordRecoveryError({code:'weak_password',status:422,reasons:['characters']}),/loại ký tự/);
+assert.match(passwordRecoveryError({code:'weak_password',status:422,message:'Password should be at least 8 characters.'}),/8–12/);
+assert.match(passwordRecoveryError({code:'weak_password',status:422,message:'Password should be at least 16 characters.'}),/vượt giới hạn 12/);
+assert.match(passwordRecoveryError({code:'validation_failed',status:400}),/chưa thể kết luận/);
+assert.match(passwordRecoveryError({code:'unexpected_failure',status:400}),/unexpected_failure; HTTP 400/);
+assert.ok(!passwordRecoveryError({code:'unexpected_failure',status:400}).includes('Chọn mật khẩu mạnh'));
+assert.ok(passwordRecoveryError({status:503}).startsWith(uncertainPasswordChange));
+assert.match(passwordRecoveryError({status:429}),/quá nhiều lần/);
+const secret='not-a-real-token';assert.ok(!passwordRecoveryError({code:'<'+secret+'>',status:422,message:secret,reasons:[secret]}).includes(secret));
+console.log('ĐẠT 14 nhánh lỗi khôi phục: same/weak/pwned/characters/minimum, phiên cũ, rate limit, 4xx chưa biết, 5xx chưa rõ kết quả; không hiển thị message/token thô.');

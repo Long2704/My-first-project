@@ -11,8 +11,11 @@ try{
   const request=route.request(),path=new URL(request.url()).pathname;
   if(path==='/auth/v1/user'&&request.method()==='PUT'){
    updates.push(request.postDataJSON());
-   if(mode==='weak')return route.fulfill({status:422,json:{code:'weak_password',message:'weak password'}});
-   if(mode==='lost')return route.fulfill({status:503,json:{message:'lost response'}});
+   if(mode==='weak')return route.fulfill({status:422,headers:{'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'X-Supabase-Api-Version'},json:{code:'weak_password',message:'weak password'}});
+   if(mode==='same')return route.fulfill({status:422,headers:{'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'X-Supabase-Api-Version'},json:{code:'same_password',message:'New password should be different from the old password.'}});
+   if(mode==='missing')return route.fulfill({status:400,headers:{'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'X-Supabase-Api-Version'},json:{code:'session_not_found',message:'Session not found'}});
+   if(mode==='unknown')return route.fulfill({status:400,headers:{'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'X-Supabase-Api-Version'},json:{code:'unexpected_failure',message:'private server detail'}});
+   if(mode==='lost')return route.fulfill({status:503,headers:{'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'X-Supabase-Api-Version'},json:{message:'lost response'}});
    await new Promise(resolve=>setTimeout(resolve,150));return route.fulfill({json:user});
   }
   if(path==='/auth/v1/user')return route.fulfill({json:user});
@@ -25,7 +28,8 @@ try{
  const submit=page.getByRole('button',{name:'Lưu mật khẩu mới',exact:true});assert.equal(updates.length,0);assert.equal(submit?await submit.isDisabled():false,true);assert.equal(business.length,0);
  await page.reload();await page.getByRole('heading',{name:'Đặt lại mật khẩu',exact:true}).waitFor();assert.equal(business.length,0);
  await page.getByLabel('Mật khẩu mới',{exact:true}).fill('OwnerNew123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('Mismatch');assert.equal(await submit.isDisabled(),true);
- await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('OwnerNew123');await submit.click();await page.getByRole('alert').filter({hasText:'Mật khẩu chưa được chấp nhận'}).waitFor();assert.equal(updates.length,1);assert.equal(await page.getByLabel('Mật khẩu mới',{exact:true}).inputValue(),'');
+ await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('OwnerNew123');await submit.click();await page.getByRole('alert').filter({hasText:'Mật khẩu chưa đạt chính sách'}).waitFor();assert.equal(updates.length,1);assert.equal(await page.getByLabel('Mật khẩu mới',{exact:true}).inputValue(),'');
+ for(const [nextMode,text] of [['same','trùng mật khẩu hiện tại'],['unknown','unexpected_failure; HTTP 400']]){mode=nextMode;await page.getByLabel('Mật khẩu mới',{exact:true}).fill('OwnerNew123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('OwnerNew123');await submit.click();await page.getByRole('alert').filter({hasText:text}).waitFor();assert.equal(await page.getByRole('heading',{name:'Đã đổi mật khẩu',exact:true}).count(),0);}
  mode='lost';await page.getByLabel('Mật khẩu mới',{exact:true}).fill('OwnerNew123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('OwnerNew123');await submit.click();await page.getByRole('alert').filter({hasText:'Chưa xác nhận được kết quả'}).waitFor();assert.equal(await page.getByRole('heading',{name:'Đã đổi mật khẩu',exact:true}).count(),0);
  mode='ok';await page.getByLabel('Mật khẩu mới',{exact:true}).fill('OwnerNew123');await page.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('OwnerNew123');
  const before=updates.length;await submit.click();await page.getByRole('heading',{name:'Đã đổi mật khẩu',exact:true}).waitFor();assert.equal(updates.length,before+1);assert.equal(updates.at(-1).password,'OwnerNew123');assert.equal(business.length,0);
@@ -33,6 +37,7 @@ try{
  await page.getByRole('button',{name:'Về đăng nhập',exact:true}).click();await page.getByRole('heading',{name:'Đăng nhập nhân viên',exact:true}).waitFor();assert.equal(await page.evaluate(()=>sessionStorage.getItem('goc-pho-password-recovery-user')),null);
  assert.equal(await page.locator('body').evaluate(element=>element.scrollWidth<=innerWidth),true);
  const invalid=await context.newPage();await invalid.goto('http://localhost:5173/#error=access_denied&error_code=otp_expired');await invalid.getByRole('alert').filter({hasText:'Liên kết khôi phục không hợp lệ'}).waitFor();assert.equal(await invalid.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).count(),0);assert.deepEqual(errors,[]);
+ mode='missing';const expiredSession=await context.newPage();await expiredSession.goto('http://localhost:5173/#'+hash);await expiredSession.getByLabel('Mật khẩu mới',{exact:true}).fill('OwnerNew123');await expiredSession.getByLabel('Nhập lại mật khẩu',{exact:true}).fill('OwnerNew123');await expiredSession.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).click();await expiredSession.getByRole('alert').filter({hasText:'session_not_found; HTTP 400'}).waitFor();assert.equal(await expiredSession.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).count(),0);await expiredSession.getByRole('button',{name:'Về đăng nhập',exact:true}).click();await expiredSession.getByRole('heading',{name:'Đăng nhập nhân viên',exact:true}).waitFor();
  console.log('ĐẠT khôi phục mật khẩu: Auth recovery thật trong SDK với API giả, reload giữ màn hình, không mở nghiệp vụ, kiểm tra 6–12/ký tự khớp, lỗi/không rõ kết quả không báo thành công, đổi mật khẩu và về đăng nhập, không lưu mật khẩu, link hết hạn.');
  await context.close();
 }finally{await browser.close();}
