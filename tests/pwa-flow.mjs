@@ -1,0 +1,58 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFile,stat,mkdtemp,cp,appendFile,rm} from 'node:fs/promises';
+import {join,extname,resolve} from 'node:path';
+import {tmpdir} from 'node:os';
+import {buildPwa} from '../scripts/build-pwa.mjs';
+const temp=await mkdtemp(join(tmpdir(),'goc-pho-pwa-'));
+await cp('dist',join(temp,'a'),{recursive:true});await cp('dist',join(temp,'b'),{recursive:true});
+await appendFile(join(temp,'b','index.html'),'<!-- pwa-version-b -->');
+const a=buildPwa(join(temp,'a')),b=buildPwa(join(temp,'b'));
+let directory='a';const requests=[];
+const server=createServer(async(req,res)=>{try{
+ const path=new URL(req.url,'http://localhost').pathname;requests.push(path);
+ const file=join(temp,directory,path==='/'?'index.html':path);
+ assert.ok(resolve(file).startsWith(resolve(temp)+ '/'));assert.ok((await stat(file)).isFile());
+ const type={'.js':'text/javascript','.css':'text/css','.html':'text/html','.webmanifest':'application/manifest+json','.png':'image/png','.webp':'image/webp'}[extname(file)]||'application/octet-stream';
+ res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store'});res.end(await readFile(file));
+ }catch{res.writeHead(404);res.end();}});
+await new Promise(resolve=>server.listen(4180,'127.0.0.1',resolve));
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+try{
+ const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'allow'});
+ const page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('http://localhost:4180/');
+ await page.evaluate(()=>navigator.serviceWorker.ready);
+ await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+ const manifest=await page.evaluate(async()=>await (await fetch(document.querySelector('link[rel=manifest]').href)).json());
+ assert.equal(manifest.display,'standalone');assert.equal(manifest.name,'Bún Riêu Góc Phố');
+ for(const icon of manifest.icons){const response=await context.request.get('http://localhost:4180'+icon.src);const png=await response.body();const dimension=Number(icon.sizes.split('x')[0]);assert.equal(png.readUInt32BE(16),dimension);assert.equal(png.readUInt32BE(20),dimension);}
+ assert.equal(await page.locator('meta[name=apple-mobile-web-app-capable]').getAttribute('content'),'yes');
+ await page.getByRole('button',{name:'Cài app',exact:true}).click();
+ await page.getByRole('dialog',{name:'Cài POS ra màn hình chính',exact:true}).waitFor();await page.getByRole('button',{name:'Đã hiểu',exact:true}).click();
+ await page.evaluate(()=>{window.installCalls=0;const event=new Event('beforeinstallprompt',{cancelable:true});event.prompt=async()=>{window.installCalls++;};event.userChoice=Promise.resolve({outcome:'dismissed'});window.dispatchEvent(event);});
+ assert.equal(await page.evaluate(()=>window.installCalls),0);await page.getByRole('button',{name:'Cài app',exact:true}).click();assert.equal(await page.evaluate(()=>window.installCalls),1);
+ await page.evaluate(()=>{window.keepWorking='draft-not-reloaded';});
+ const second=await context.newPage();await second.goto('http://localhost:4180/');await second.evaluate(()=>navigator.serviceWorker.ready);
+ directory='b';await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration();await registration.update();});
+ await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration())?.waiting);
+ await page.getByText('Có bản cập nhật mới',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.keepWorking),'draft-not-reloaded');
+ const version=await page.evaluate(async()=>{const channel=new MessageChannel();const received=new Promise(resolve=>channel.port1.onmessage=event=>resolve(event.data.version));navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'},[channel.port2]);return received;});assert.equal(version,a.version);
+ await page.close();assert.equal(await second.evaluate(()=>navigator.serviceWorker.controller.state),'activated');
+ const source=await readFile('dist/sw.js','utf8');assert.ok(!source.includes('skipWaiting('));assert.ok(!source.includes('backgroundsync'));assert.ok(source.includes("url.origin!==self.location.origin"));assert.ok(source.includes("request.headers.has('authorization')"));
+ const waitingWorker=context.serviceWorkers().at(-1);
+ await second.close();
+ await assert.doesNotReject(async()=>{for(let i=0;i<100;i++){const keys=await waitingWorker.evaluate(()=>caches.keys());if(keys.length===1&&keys[0]==='goc-pho-shell-'+b.version)return;await new Promise(resolve=>setTimeout(resolve,100));}throw Error('New worker did not activate after all windows closed');});
+ const fresh=await context.newPage();await fresh.goto('http://localhost:4180/');
+ await fresh.waitForFunction(async()=>{const registration=await navigator.serviceWorker.getRegistration();return !!registration?.active&&!registration.waiting;});
+ await fresh.reload();assert.ok(await fresh.evaluate(async()=>(await (await fetch('/index.html')).text()).includes('pwa-version-b')));
+ const keys=await fresh.evaluate(()=>caches.keys());assert.deepEqual(keys,['goc-pho-shell-'+b.version]);
+ const cached=await fresh.evaluate(async()=>{const names=await caches.keys();return (await (await caches.open(names[0])).keys()).map(request=>new URL(request.url).pathname);});assert.deepEqual(cached.sort(),b.files.sort());assert.ok(!cached.some(path=>/auth|rest\/|functions\//.test(path)));
+ await context.setOffline(true);await fresh.reload();await fresh.getByText('Mất kết nối. Kết nối mạng để gửi món, cập nhật bếp và thanh toán.',{exact:true}).waitFor();
+ assert.equal(await fresh.locator('.brand-mark').evaluate(image=>image.naturalWidth>0),true);assert.ok(await fresh.locator('body').evaluate(element=>element.scrollWidth<=innerWidth));
+ await context.setOffline(false);await fresh.waitForFunction(()=>!document.querySelector('.pwa-offline'));
+ await fresh.evaluate(()=>window.dispatchEvent(new Event('appinstalled')));await fresh.getByRole('button',{name:'Cài app',exact:true}).waitFor({state:'hidden'});
+ assert.deepEqual(errors,[]);console.log('PWA passed: manifest/icons, install prompt/manual help, no reload during update, all clients close before activation, static-only cache, offline shell and reconnect.');
+ await context.close();
+}finally{await browser.close();await new Promise(resolve=>server.close(resolve));await rm(temp,{recursive:true,force:true});}
