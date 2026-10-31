@@ -60,7 +60,9 @@
     "test:pwa": "npm run build && node tests/pwa-flow.mjs",
     "test:password-recovery-ui": "node tests/password-recovery-errors.mjs && node tests/password-recovery-flow.mjs",
     "test:frontend-performance": "node tests/frontend-performance-flow.mjs",
-    "test:quantity-touch": "node tests/quantity-touch-flow.mjs"
+    "test:quantity-touch": "node tests/quantity-touch-flow.mjs",
+    "test:staff-table-cancel": "node tests/staff-table-cancellation-sql.mjs",
+    "test:staff-table-cancel-ui": "node tests/staff-table-cancellation-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
