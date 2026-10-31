@@ -1015,3 +1015,6 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled) {
 .payment-dialog input,.payment-dialog select,.login-form input {
   font-size:16px
 }
+/* Ghi chú luôn nhìn thấy sau khi chọn món, ở cả menu và chi tiết đơn. */
+.pos-menu-note { grid-column:2 / -1; margin:2px 0 0; }
+.pos-product-row:has(.pos-menu-note) { row-gap:6px; }
