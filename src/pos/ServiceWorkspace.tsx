@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Order } from '../order-model';
 import ConfirmDialog from '../ConfirmDialog';
@@ -75,13 +75,14 @@ export default function ServiceWorkspace(p: Props) {
     const savedCount = p.orders.flatMap(order => order.order_items).filter(line => !line.cancelled_at && !line.paid).reduce((sum, line) => sum + line.qty, 0);
     const displayCount = savedCount + (knownRequest ? 0 : count);
     const total = p.pendingPaymentAmount ?? (p.savedTotal + (knownRequest ? 0 : draftTotal));
-    const visible = searchProducts(p.products, category, query);
+    const visible = useMemo(()=>searchProducts(p.products, category, query),[p.products,category,query]);
     const removeName = p.products.find(product => product.id === removing)?.name ?? '';
-    function change(id: string, delta: number) { if (p.disabled)
-        return; if (delta < 0 && p.qty[id] === 1) {
+    const qtyRef=useRef(p.qty);qtyRef.current=p.qty;
+    const change=useCallback((id: string, delta: number) => { if (p.disabled)
+        return; if (delta < 0 && qtyRef.current[id] === 1) {
         setRemoving(id);
         return;
-    } p.onChange(id, delta); }
+    } p.onChange(id, delta); },[p.disabled,p.onChange]);
     function toOrder() { setMore(false); p.onMode('order'); }
     return <div className={`pos-order-workspace pos-mode-${p.mode}`}>
   <POSHeader title={p.table.name.toLocaleUpperCase('vi-VN')} back={p.mode === 'order'} onBack={() => p.mode === 'menu' && (count || p.orders.length) ? toOrder() : p.onClose()} actions={p.mode === 'menu' ? <><button className="pos-icon-button" aria-label="Tìm kiếm món" aria-expanded={search} onClick={() => setSearch(v => !v)}><POSIcon name="search"/></button><button className="pos-icon-button" aria-label="Xem đơn hàng" onClick={toOrder}><POSIcon name="receipt"/></button></> : p.tableActionsVisible ? <span className="pos-header-external-actions"/> : <button className="pos-icon-button" aria-label="Thao tác đơn" aria-expanded={more} onClick={() => setMore(v => !v)}><POSIcon name="more"/></button>}/>

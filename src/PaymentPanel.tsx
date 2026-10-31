@@ -3,7 +3,7 @@ import {forwardRef,useEffect,useImperativeHandle,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {supabase} from './supabase';
 import type {OrderLine, TableSession} from './order-model';
-const money=(n:number)=>new Intl.NumberFormat('vi-VN').format(n)+'đ';
+import {formatMoney as money} from './format';
 type Bill={service_label?:string;id:string;invoice_no:number;table_no:number;bill_no:number;gross:number;discount:number;total:number;method:string;cash_received:number|null;change_due:number;paid_at:string;bill_items:{id:string;name:string;price:number;qty:number;note:string}[]};
 type Attempt={tableName?:string;requestId:string;sessionId:string;tableId:number;itemIds:string[];method:'cash'|'transfer';discountType:'amount'|'percent';discountValue:number;cash:number|null;gross:number;discount:number;total:number;items:OrderLine[];billNo?:number;billId?:string};
 export type PaymentHandle={open:()=>void};
