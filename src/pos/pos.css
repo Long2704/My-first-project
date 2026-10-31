@@ -363,6 +363,10 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled) {
   padding-bottom:0
 }
 .pos-product-add {
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+  -webkit-user-select:none;
   position:relative;
   display:grid;
   place-items:center;
@@ -407,52 +411,74 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled) {
   background:#f0f6fc
 }
 .pos-product-row:has(.pos-quantity-control) {
-  grid-template-columns:56px minmax(0,1fr) 108px
+  grid-template-columns:56px minmax(0,1fr) 120px
 }
 .pos-quantity-control {
   display:grid;
-  grid-template-columns:36px 36px 36px;
-  align-items:center;
-  width:108px;
-  height:28px;
+  grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);
+  align-items:stretch;
+  width:120px;
+  height:44px;
   border:1px solid #ddd;
   border-radius:6px;
   background:#fff;
+  overflow:hidden;
   flex:none
 }
 .pos-quantity-control button {
   position:relative;
   display:grid;
   place-items:center;
-  width:36px;
-  height:44px;
-  min-height:44px;
+  width:100%;
+  height:100%;
+  min-height:0;
+  margin:0;
   border:0;
   border-radius:0;
   padding:0;
   background:transparent;
-  transform:translateY(0)
+  transform:none;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:none
 }
-.pos-quantity-control button:first-child {
-  margin-top:-8px;
-  margin-bottom:-8px
-}
-.pos-quantity-control button:last-child {
-  margin-top:-8px;
-  margin-bottom:-8px
+.pos-quantity-control button:focus-visible {
+  outline:2px solid #0066cc;
+  outline-offset:-3px
 }
 .pos-quantity-control .pos-ui-icon {
   width:14px;
-  height:14px
+  height:14px;
+  pointer-events:none
 }
 .pos-quantity-control output {
+  display:grid;
+  place-items:center;
+  min-width:0;
+  margin:0;
   font-size:13px;
-  line-height:24px;
-  text-align:center;
+  line-height:1;
+  white-space:nowrap;
   color:#171717;
-  font-variant-numeric:tabular-nums
+  font-variant-numeric:tabular-nums;
+  user-select:none;
+  -webkit-user-select:none
 }
-.pos-quantity-control button:active:not(:disabled) {
+/* A touch can leave :hover latched; only mouse/trackpad gets hover feedback. */
+.pos-quantity-control button:hover:not(:disabled),
+.pos-product-add:hover:not(:disabled) {
+  background:transparent
+}
+@media(hover:hover) and (pointer:fine) {
+  .pos-quantity-control button:hover:not(:disabled),
+  .pos-product-add:hover:not(:disabled) {
+    background:#f3f6fa
+  }
+}
+.pos-quantity-control button:active:not(:disabled),
+.pos-product-add:active:not(:disabled) {
   background:#eaf3ff
 }
 .pos-menu-bottom {
@@ -1000,11 +1026,6 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled) {
   background:#eaf3ff;
   border-color:#d4e5fb;
   color:#22517f
-}
-.pos-quantity-control button:before {
-  content:"";
-  position:absolute;
-  inset:0 -4px
 }
 .pos-pane {
   overflow-x:hidden
