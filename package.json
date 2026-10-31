@@ -63,7 +63,8 @@
     "test:quantity-touch": "node tests/quantity-touch-flow.mjs",
     "test:staff-table-cancel": "node tests/staff-table-cancellation-sql.mjs",
     "test:staff-table-cancel-ui": "node tests/staff-table-cancellation-flow.mjs",
-    "test:payment-layout": "node tests/payment-layout-flow.mjs"
+    "test:payment-layout": "node tests/payment-layout-flow.mjs",
+    "test:reorder-saved": "node tests/reorder-saved-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

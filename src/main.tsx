@@ -43,7 +43,7 @@ function checkedAccess(data:unknown):Profile{
 }
 type Pending={requestId:string;tableId:number;items:{menu_item_id:string;qty:number;note:string;expected_price?:number}[]};
 type KitchenOrder=Order&{table_sessions:{table_id:number;closed_at:string|null;table_path?:number[]}};
-const orderFields='service_label,table_path,id,request_id,session_id,status,kitchen_relevant,created_at,order_items(id,name,price,qty,category,note,paid,bill_no,cancelled_at,cancel_reason)';
+const orderFields='service_label,table_path,id,request_id,session_id,status,kitchen_relevant,created_at,order_items(id,menu_item_id,name,price,qty,category,note,paid,bill_no,cancelled_at,cancel_reason)';
 const storageKey=(user:string)=>`goc-pho-pending-v1:${user}`;
 function App(){
  const online=useOnline();
@@ -82,6 +82,7 @@ function App(){
  const [pending,setPending]=useState<Pending|null>(null),[sending,setSending]=useState(false);
  const [sessions,setSessions]=useState<TableSession[]>([]),[cooking,setCooking]=useState<KitchenOrder[]>([]);
  const [syncError,setSyncError]=useState(''),[lastSync,setLastSync]=useState(''),[completing,setCompleting]=useState<string|null>(null);
+ const refreshDone=useRef<Promise<void>>(Promise.resolve()),lastRefreshOk=useRef(false);
  const sendLock=useRef(false),refreshLock=useRef(false),identity=useRef<string|null>(null);
  useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(Object.values(drafts).some(table=>Object.values(table).some(qty=>qty>0))||pending||sending){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[drafts,pending,sending]);
  const menuRef=useRef(menu),draftRef=useRef(drafts);menuRef.current=menu;draftRef.current=drafts;
@@ -115,9 +116,12 @@ function App(){
   }
   void load();return()=>{active=false;};
  },[session?.user.id,reload,recovering]);
- const refresh=useCallback(async()=>{
-  if(!supabase||!profile||profile.must_change_password||!session||refreshLock.current)return;
-  const user=session.user.id;refreshLock.current=true;
+ const refresh=useCallback(async(force=false)=>{
+  if(!supabase||!profile||profile.must_change_password||!session){if(force)lastRefreshOk.current=false;return;}
+  const user=session.user.id;
+  if(refreshLock.current){if(!force)return;await refreshDone.current;if(identity.current!==user){lastRefreshOk.current=false;return;}}
+  let finish=()=>{};refreshDone.current=new Promise<void>(resolve=>{finish=resolve;});
+  refreshLock.current=true;lastRefreshOk.current=false;
   try{
    const accessResult=await supabase.rpc('get_my_access');
    if(identity.current!==user)return;
@@ -144,9 +148,9 @@ function App(){
    if(s.error||k.error||m.error||t.error)throw new Error();
    if(identity.current===user){
     if(JSON.stringify(menuRef.current)!==JSON.stringify(m.data)&&Object.values(draftRef.current).some(d=>Object.values(d).some(n=>n>0)))setMessage('Thực đơn đã thay đổi. Kiểm tra lại giá và món đang chọn trước khi gửi.');
-    setTables(prev=>JSON.stringify(prev)===JSON.stringify(t.data??[])?prev:t.data??[]);setSelected(prev=>{if(!prev)return null;const next=(t.data??[]).find(t=>t.id===prev.id);return next&&next.name!==prev.name?next:prev;});setMenu(prev=>JSON.stringify(prev)===JSON.stringify(m.data??[])?prev:m.data??[]);setSessions(prev=>JSON.stringify(prev)===JSON.stringify(s.data)?prev:s.data as unknown as TableSession[]);setCooking(prev=>JSON.stringify(prev)===JSON.stringify(k.data)?prev:k.data as unknown as KitchenOrder[]);setLastSync(new Date().toLocaleTimeString('vi-VN'));setSyncError('');}
+    setTables(prev=>JSON.stringify(prev)===JSON.stringify(t.data??[])?prev:t.data??[]);setSelected(prev=>{if(!prev)return null;const next=(t.data??[]).find(t=>t.id===prev.id);return next&&next.name!==prev.name?next:prev;});setMenu(prev=>JSON.stringify(prev)===JSON.stringify(m.data??[])?prev:m.data??[]);setSessions(prev=>JSON.stringify(prev)===JSON.stringify(s.data)?prev:s.data as unknown as TableSession[]);setCooking(prev=>JSON.stringify(prev)===JSON.stringify(k.data)?prev:k.data as unknown as KitchenOrder[]);setLastSync(new Date().toLocaleTimeString('vi-VN'));setSyncError('');lastRefreshOk.current=true;}
   }catch{if(identity.current===user)setSyncError('Chưa đồng bộ được đơn hàng. Dữ liệu có thể đã cũ; kiểm tra mạng rồi bấm Đồng bộ.');}
-  finally{refreshLock.current=false;}
+  finally{refreshLock.current=false;finish();}
  },[profile,session?.user.id]);
  useEffect(()=>{
   void refresh();const timer=setInterval(()=>void refresh(),5000);
@@ -204,10 +208,13 @@ function App(){
     throw new Error(r.error.message);
    }
    if(identity.current!==user)return;
+   // Keep the delta and request ID until a fresh server snapshot is visible.
+   await refresh(true);
+   if(identity.current!==user)return;
+   if(!lastRefreshOk.current){setError('Đơn đã được lưu nhưng chưa đồng bộ. Giữ nguyên mã và bấm Thử gửi lại để kiểm tra; không tạo đơn mới.');return;}
    try{localStorage.removeItem(storageKey(user));}catch{/* Retained request ID is safe to retry after reload. */}
    setPending(null);setPosScreen('order');setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));
    setMessage(`Đã lưu đơn ${tables.find(t=>t.id===payload.tableId)?.name??placeLabel(payload.tableId)}.`);
-   await refresh();
   }catch(e){if(identity.current===user)setError(rejectedByMenu?(e instanceof Error?e.message:'Thực đơn đã thay đổi. Kiểm tra lại trước khi gửi.'):`Chưa xác nhận gửi đơn: ${e instanceof Error?e.message:'Lỗi kết nối'}. Giữ nguyên đơn và bấm Thử gửi lại; không tạo đơn mới.`);}
   finally{sendLock.current=false;setSending(false);}
  }
