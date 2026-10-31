@@ -48,6 +48,7 @@ const PaymentPanel=forwardRef<PaymentHandle,Props>(function PaymentPanel({compac
   if(mounted.current){setReceipt(r.data);setDraft(null);setOpen(true);}
  }
  async function pay(){
+  if(!navigator.onLine){setError('Mất kết nối. Kết nối mạng trước khi thanh toán.');return;}
   if(!supabase||!canPay||lock.current||storageError)return;
   let attempt=pending;
   if(attempt&&!attempt.billId&&attempt.discountValue>0&&!canDiscount){setError('Yêu cầu chờ có giảm giá. Liên hệ Bún Riêu Góc Phố để đối chiếu; không tạo thanh toán mới.');return;}
