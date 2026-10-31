@@ -17,7 +17,7 @@ export default function InitialPasswordSetup({onCompleted,onBusy}:{onCompleted:(
   if(!result.data||result.data.is_active!==true){onCompleted();return;}
   if(result.data.must_change_password===false){onCompleted();return;}
   setVerificationPending(false);
-  throw new Error('Chưa hoàn tất thiết lập mật khẩu. Vui lòng thử lại hoặc liên hệ Chủ quán.');
+  throw new Error('Chưa hoàn tất thiết lập mật khẩu. Vui lòng thử lại hoặc liên hệ Bún Riêu Góc Phố.');
  }
 
  async function submit(checkOnly=false){

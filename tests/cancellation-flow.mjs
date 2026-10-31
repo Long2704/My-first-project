@@ -36,7 +36,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
 });
 const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
 
-async function management(name){const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
+async function management(name){if(await page.getByRole('button',{name:'Quay lại danh sách bàn',exact:true}).isVisible())await page.getByRole('button',{name:'Quay lại danh sách bàn',exact:true}).click();const control=page.locator('.management-menu');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();await page.getByRole('button',{name,exact:true}).click();}
 async function tableActions(){const control=page.locator('.table-operations');if(!await control.evaluate(e=>e.open))await control.locator('summary').click();}
 async function openOrderMenu(){const add=page.getByRole('button',{name:'Thêm món',exact:true});if(await add.isVisible())await add.click();}
 await page.goto('http://localhost:5173');
@@ -45,11 +45,11 @@ await page.getByRole('button',{name:/^Bàn 1 /}).waitFor();
 assert.equal(await page.locator('.table-card').count(),12);
 await page.getByRole('button',{name:/^Bàn 1 /}).click();
 await openOrderMenu();await page.getByRole('button',{name:'Thêm Bún riêu truyền thống',exact:true}).click();
-await page.getByLabel('Ghi chú món').fill('Không hành');
-await openOrderMenu();await page.getByRole('button',{name:'Nước giải khát',exact:true}).click();await openOrderMenu();await page.getByRole('button',{name:'Thêm Trà đá',exact:true}).click();
-assert.match(await page.locator('footer').innerText(),/61\.000đ/);
+await page.getByRole('button',{name:'Xem đơn hàng',exact:true}).click();await page.getByRole('button',{name:'Thao tác Bún riêu truyền thống',exact:true}).click();await page.getByRole('button',{name:'Ghi chú món',exact:true}).click();await page.getByLabel('Ghi chú món').fill('Không hành');
+await openOrderMenu();await page.getByRole('button',{name:'Đồ uống',exact:true}).click();await openOrderMenu();await page.getByRole('button',{name:'Thêm Trà đá',exact:true}).click();
+await page.getByRole('button',{name:'Xem đơn hàng',exact:true}).click();assert.match(await page.locator('.pos-total-line').innerText(),/61\.000đ/);
 await page.getByRole('button',{name:'Gửi bếp',exact:true}).click();
-await page.getByText('Đã lưu đơn Bàn 1.',{exact:false}).waitFor();
+await page.getByRole('status').filter({hasText:'Đã lưu đơn Bàn 1.'}).waitFor();
 await page.getByRole('button',{name:'Hủy Bún riêu truyền thống',exact:true}).click();
 const confirm=page.getByRole('button',{name:'Xác nhận hủy món',exact:true});
 assert.equal(await confirm.isDisabled(),false);assert.equal(await page.getByLabel('Lý do hủy',{exact:true}).count(),0);await page.getByRole('dialog').getByRole('button',{name:'Quay lại',exact:true}).click();assert.equal(cancelAttempts.length,0);await page.getByRole('button',{name:'Hủy Bún riêu truyền thống',exact:true}).click();
@@ -58,7 +58,7 @@ await page.getByText('Chưa xác nhận hủy:',{exact:false}).waitFor();
 await confirm.click();
 await page.getByText('Đã hủy',{exact:true}).waitFor();
 assert.equal(cancelAttempts.length,2);assert.equal(cancelAttempts[0].p_item_id,cancelAttempts[1].p_item_id);
-assert.match(await page.getByRole('heading',{name:/Đơn đã lưu/}).innerText(),/3\.000đ/);
+assert.match(await page.locator('.pos-total-line').innerText(),/3\.000đ/);
 await management('Nhật ký hoạt động');
 await page.locator('.management-page:not([hidden])').getByText('1 × Bún riêu truyền thống',{exact:false}).waitFor();
 await page.getByLabel('Loại hoạt động',{exact:true}).selectOption('cancel_item');

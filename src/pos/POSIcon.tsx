@@ -1,0 +1,5 @@
+type Name = 'close' | 'back' | 'search' | 'more' | 'plus' | 'minus' | 'plate' | 'cup' | 'person' | 'note' | 'bag' | 'receipt' | 'check';
+const paths: Record<Name, string> = { close: 'm6 6 12 12M6 18 18 6', back: 'm15 5-7 7 7 7', search: 'm20 20-4.5-4.5M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0', more: 'M5 12h.01M12 12h.01M19 12h.01', plus: 'M12 5v14M5 12h14', minus: 'M5 12h14', plate: 'M3 3v6c0 2 4 2 4 0V3M5 3v18M20 3c-4 3-4 8 0 9V3v18M15 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0', cup: 'M5 4h11v12a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V4M16 6h2a3 3 0 0 1 0 6h-2M4 22h14', person: 'M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0M4 21v-2a8 8 0 0 1 16 0v2', note: 'm15 4 5 5M4 20l5-1L21 7l-5-5L4 14v6', bag: 'M5 7h14l1 14H4L5 7M8 7V5a4 4 0 0 1 8 0v2', receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3M9 7h6M9 11h6M9 15h4', check: 'm5 12 4 4L19 6' };
+export default function POSIcon({ name }: {
+    name: Name;
+}) { return <svg className={`pos-ui-icon icon-${name}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 3 : 1.65} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>; }

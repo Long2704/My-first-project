@@ -24,7 +24,7 @@ try{
   await route.fulfill({json:body});
  });
  const page=await context.newPage();page.setDefaultTimeout(10000);await page.goto('http://localhost:5173');await page.getByLabel('Tên đăng nhập',{exact:true}).fill('owner@example.test');await page.getByLabel('Mật khẩu',{exact:true}).fill('old-long-password-is-still-valid');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
- async function openList(){await page.locator('.management-menu summary').click();await page.getByRole('button',{name:'Quản lý nhân viên',exact:true}).click();await page.getByRole('heading',{name:'Owner',exact:true}).waitFor();}
+ async function openList(){await page.locator('.management-menu summary').click();await page.getByRole('button',{name:'Quản lý nhân viên',exact:true}).click();await page.getByRole('heading',{name:'Bún Riêu Góc Phố',exact:true}).waitFor();}
  await openList();assert.equal(await page.getByRole('button',{name:'Xóa tài khoản Owner',exact:true}).count(),0);
  await page.getByRole('button',{name:'Xóa tài khoản Nhân viên',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Xóa tài khoản nhân viên',exact:true});await dialog.waitFor();await dialog.getByText('Đơn hàng, thanh toán và nhật ký cũ vẫn được giữ để đối chiếu.',{exact:true}).waitFor();assert.equal(calls.filter(c=>c.action==='delete_employee').length,0);
  await dialog.getByRole('button',{name:'Xác nhận xóa tài khoản',exact:true}).click();await dialog.getByText('Chưa xác nhận kết quả xóa.',{exact:true}).waitFor();await page.reload();await openList();await dialog.waitFor({state:'hidden'});
