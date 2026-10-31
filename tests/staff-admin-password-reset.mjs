@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createStaffAdminHandler} from '../supabase/functions/staff-admin/index.ts';
 const owner='00000000-0000-0000-0000-000000000001',employee='00000000-0000-0000-0000-000000000002',request='90000000-0000-0000-0000-000000000001',secret='mock-server-secret';
-const input={action:'reset_password',employee_id:employee,request_id:request,expected_version:3,password:'new-temporary-123'};
+const input={action:'reset_password',employee_id:employee,request_id:request,expected_version:3,password:'Reset123!'};
 function fixture(mode='ok',role='chu'){
  let completed=false,admin=0,finish=0;const calls=[];
  const handler=createStaffAdminHandler({supabaseUrl:'https://example.test',publicKey:'mock-public',serviceKey:secret,fetcher:async(url,init)=>{
@@ -30,7 +30,7 @@ function fixture(mode='ok',role='chu'){
 }
 for(const role of ['phuc_vu','bep']){const f=fixture('ok',role);assert.equal((await f.send()).status,403);assert.deepEqual(f.counts(),{admin:0,finish:0});}
 const good=fixture();assert.equal((await good.send({...input,owner_id:'fake'})).completed,true);assert.equal((await good.send()).completed,true);assert.deepEqual(good.counts(),{admin:1,finish:1});
-const lost=fixture('adminlost');assert.equal((await lost.send()).pending,true);assert.deepEqual(lost.counts(),{admin:1,finish:0});assert.equal((await lost.send({...input,password:'a-different-temp-123'})).completed,true);
+const lost=fixture('adminlost');assert.equal((await lost.send()).pending,true);assert.deepEqual(lost.counts(),{admin:1,finish:0});assert.equal((await lost.send({...input,password:'Next456!'})).completed,true);
 const responseLost=fixture('finishlost');assert.equal((await responseLost.send()).pending,true);assert.equal((await responseLost.send({...input,action:'check_password_reset'})).reset.completed,true);assert.equal(responseLost.counts().admin,1);
 const conflict=fixture('conflict');assert.equal((await conflict.send()).status,409);assert.equal(conflict.counts().admin,0);
 const rejected=fixture('rejected');assert.equal((await rejected.send()).pending,true);assert.equal(rejected.counts().finish,0);

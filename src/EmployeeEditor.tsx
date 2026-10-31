@@ -23,7 +23,7 @@ export default function EmployeeEditor({employee,userId,onClose,onChanged}:{empl
    setPending(payload);
    const result=await supabase.rpc(payload.p_username!==undefined?'update_employee_account':'update_employee',payload);
    if(result.error){
-    const certain=result.error.code==='23505'||result.error.code==='P0001'&&/đã thay đổi|không hợp lệ|đang đặt lại mật khẩu|(?:Mã nhân viên|Tên đăng nhập) đã/.test(result.error.message);
+    const certain=result.error.code==='23505'||result.error.code==='P0001'&&/đã thay đổi|không hợp lệ|đang đặt lại mật khẩu|đã xóa hoặc đang xóa|(?:Mã nhân viên|Tên đăng nhập) đã/.test(result.error.message);
     if(certain){localStorage.removeItem(storageKey);setPending(null);onChanged();}
     throw new Error(result.error.code==='P0001'?result.error.message:result.error.code==='23505'?'Tên đăng nhập đã tồn tại.':'Chưa xác nhận được kết quả. Bấm Thử lại cùng yêu cầu.');
    }
