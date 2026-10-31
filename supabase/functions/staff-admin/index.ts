@@ -173,11 +173,24 @@ export function createStaffAdminHandler(settings: Settings) {
       const confirmed=await prepare();
       if(confirmed.response.ok&&confirmed.data?.completed===true)return reply(200,{ok:true,user_id:confirmed.data.user_id,message:'Đã tạo nhân viên. Nhân viên phải đổi mật khẩu lần đầu.'});
       if(created.status>=400&&created.status<500){
+       // Chỉ trả mã lỗi đã giới hạn, không trả msg/raw body có thể chứa thông tin tài khoản.
+       let authCode='unknown';
+       try{const failure=await created.json();const candidate=failure.error_code??failure.code;if(typeof candidate==='string'&&/^[a-z_]{1,64}$/.test(candidate))authCode=candidate;}catch{/* Giữ thông báo chung nếu Auth không trả JSON. */}
+       const known:Record<string,string>={
+        weak_password:'Mật khẩu tạm chưa đạt chính sách Supabase. Dùng mật khẩu khác có chữ hoa, chữ thường, số và ký tự đặc biệt.',
+        email_address_invalid:'Supabase từ chối địa chỉ đăng nhập nội bộ do hệ thống tạo. Cần sửa backend; không phải lỗi tên đăng nhập của bạn.',
+        email_address_not_authorized:'Supabase không cho phép địa chỉ đăng nhập nội bộ hiện tại. Cần kiểm tra cấu hình Auth.',
+        email_exists:'Định danh đăng nhập nội bộ đã tồn tại. Không sửa hoặc tạo lại tài khoản cũ.',
+        user_already_exists:'Định danh đăng nhập nội bộ đã tồn tại. Không sửa hoặc tạo lại tài khoản cũ.',
+        not_admin:'Backend chưa có quyền quản trị Auth. Cần kiểm tra cấu hình function phía server.'
+       };
+       const reason=known[authCode]??'Supabase Auth từ chối tạo tài khoản. Gửi lại mã lỗi bên dưới để xác định nguyên nhân.';
+
        // Không tự reset hay sửa tài khoản Auth có email đã tồn tại.
        const cancelled=await cancel();
        const result=await cancelled.json();
        if(result.ok||result.pending)return reply(cancelled.status,result);
-       return reply(409,{error:'Auth chưa chấp nhận tài khoản. Kiểm tra tên đăng nhập hoặc chính sách mật khẩu; tài khoản cũ không bị sửa.',released:true});
+       return reply(409,{error:`${reason} (Auth HTTP ${created.status}; mã: ${authCode})`,released:true});
       }
       return reply(503,{error:'Chưa xác nhận được kết quả. Bấm Kiểm tra lại.',pending:true});
     } catch {
