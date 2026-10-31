@@ -130,9 +130,6 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled) {
   border-radius:50%;
   margin:0
 }
-.pos-workspace-menu .pos-legacy-operations>.table-actions-trigger {
-  display:none
-}
 .pos-order-workspace {
   --brand:#0066cc;
   --brand-soft:#eaf3ff;
