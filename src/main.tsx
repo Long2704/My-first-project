@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import type {Session} from '@supabase/supabase-js';
 import {supabase} from './supabase';
+import PasswordRecovery,{recoveryCallback,recoveryUser,rememberRecovery} from './PasswordRecovery';
 import {fifo, kitchenLines, savedTotal, tableStatus, placeLabel} from './order-model';
 import type {Order, TableSession} from './order-model';
 import './style.css';
@@ -45,6 +46,7 @@ const orderFields='service_label,table_path,id,request_id,session_id,status,kitc
 const storageKey=(user:string)=>`goc-pho-pending-v1:${user}`;
 function App(){
  const online=useOnline();
+ const [recovering,setRecovering]=useState(()=>recoveryCallback||!!recoveryUser());
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(true);
  const [profile,setProfile]=useState<Profile|null>(null),[menu,setMenu]=useState<Item[]>([]),[tables,setTables]=useState<DiningTable[]>([]);
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false);
@@ -85,12 +87,13 @@ function App(){
  useEffect(()=>{
   if(!supabase){setError('Chưa cấu hình kết nối Supabase.');setLoading(false);return;}
   let active=true,changed=false;
-  const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,s)=>{changed=true;if(active){setSession(s);setLoading(false);}});
+  const {data:{subscription}}=supabase.auth.onAuthStateChange((event,s)=>{changed=true;if(active){if(event==='PASSWORD_RECOVERY'&&s){rememberRecovery(s.user.id);setRecovering(true);}else if(event==='SIGNED_OUT'){rememberRecovery(null);}else if(s&&recoveryUser()&&recoveryUser()!==s.user.id&&!recoveryCallback){rememberRecovery(null);setRecovering(false);}setSession(s);setLoading(false);}});
   supabase.auth.getSession().then(({data,error})=>{if(active&&!changed){setSession(data.session);if(error)setError('Không thể khôi phục phiên đăng nhập.');setLoading(false);}}).catch(()=>{if(active){setError('Không thể kết nối. Vui lòng tải lại trang.');setLoading(false);}});
   return()=>{active=false;subscription.unsubscribe();};
  },[]);
  useEffect(()=>{
   setTableSearch('');setTableFilter('all');setReceiptRequest(null);setProfile(null);setMenu([]);setTables([]);setDrafts({});setNotes({});setSelected(null);setPosScreen('order');setSessions([]);setCooking([]);setPending(null);setError('');setMessage('');setLastSync('');setSyncError('');
+  if(recovering){setLoading(false);return;}
   if(!session||!supabase)return;
   const user=session.user.id;let active=true;setLoading(true);
   try{
@@ -109,7 +112,7 @@ function App(){
    }catch(e){if(active)setError(e instanceof Error?e.message:'Không thể tải dữ liệu.');}finally{if(active)setLoading(false);}
   }
   void load();return()=>{active=false;};
- },[session?.user.id,reload]);
+ },[session?.user.id,reload,recovering]);
  const refresh=useCallback(async()=>{
   if(!supabase||!profile||profile.must_change_password||!session||refreshLock.current)return;
   const user=session.user.id;refreshLock.current=true;
@@ -229,14 +232,14 @@ function App(){
  const visibleTables=channelTables.filter(t=>t.name.toLocaleLowerCase('vi-VN').includes(tableSearch.trim().toLocaleLowerCase('vi-VN'))&&(tableFilter==='all'||(tableFilter==='busy')===sessions.some(s=>s.table_id===t.id)));
  const titles:Record<View,string>={service:selected?(showTableMenu?'Gọi món':'Đơn đã gọi'):'Sơ đồ bàn',kitchen:'Khu vực bếp',tables:'Quản lý bàn',menu:'Quản lý thực đơn',revenue:'Báo cáo doanh thu',audit:'Nhật ký hoạt động',invoices:'Hóa đơn gần đây',employees:'Quản lý nhân viên'};
  return <div className={`pos-app${view==='service'&&selected?' has-pos-workspace pos-workspace-'+posScreen:''}`}><header className="app-header"><a className="brand" href="#" onClick={e=>{e.preventDefault();if(profile)navigate(profile.role==='bep'?'kitchen':'service');}}><img className="brand-mark" src="/brand/goc-pho-logo.webp" alt="Logo Bún Riêu Góc Phố" width={54} height={54}/><span><strong>Bún Riêu Góc Phố</strong><small>QUẢN LÝ BÁN HÀNG</small></span></a>
- {session&&<div className="account"><span className="account-name">{profile?.role==='chu'?'Bún Riêu Góc Phố':profile?.name??'Nhân viên'}{profile?.role!=='chu'&&<small>{profile?roles[profile.role]:''}</small>}</span><button className="logout-button" disabled={busy||!!profile&&!profile.must_change_password&&locked} onClick={logout}>Đăng xuất</button></div>}</header>
- {profile&&!profile.must_change_password&&!loading&&<div className="app-navigation"><nav aria-label="Chức năng">{permitted(profile,'orders.read')&&<button aria-pressed={view==='service'} onClick={()=>navigate('service')}><PosIcon name="tables"/>Phục vụ</button>}<button aria-pressed={view==='kitchen'} onClick={()=>navigate('kitchen')}><PosIcon name="kitchen"/>Bếp ({cooking.length})</button>
+ {session&&!recovering&&<div className="account"><span className="account-name">{profile?.role==='chu'?'Bún Riêu Góc Phố':profile?.name??'Nhân viên'}{profile?.role!=='chu'&&<small>{profile?roles[profile.role]:''}</small>}</span><button className="logout-button" disabled={busy||!!profile&&!profile.must_change_password&&locked} onClick={logout}>Đăng xuất</button></div>}</header>
+ {profile&&!recovering&&!profile.must_change_password&&!loading&&<div className="app-navigation"><nav aria-label="Chức năng">{permitted(profile,'orders.read')&&<button aria-pressed={view==='service'} onClick={()=>navigate('service')}><PosIcon name="tables"/>Phục vụ</button>}<button aria-pressed={view==='kitchen'} onClick={()=>navigate('kitchen')}><PosIcon name="kitchen"/>Bếp ({cooking.length})</button>
  {!canManage&&canReadInvoices&&<button aria-pressed={view==='invoices'} onClick={()=>navigate('invoices')}><PosIcon name="invoice"/>Hóa đơn của tôi</button>}{canManage&&<details ref={managementNav} data-active={view!=='service'&&view!=='kitchen'} className="management-menu"><summary><PosIcon name="menu"/>Quản lý<PosIcon name="chevron"/></summary><div className="management-dropdown"><small>QUẢN LÝ QUÁN</small>{permitted(profile,'employees.manage')&&<button onClick={()=>navigate('employees')}><PosIcon name="employees"/>Quản lý nhân viên</button>}{permitted(profile,'menu.manage')&&<><button onClick={()=>navigate('menu')}><PosIcon name="menu"/>Quản lý thực đơn</button><button onClick={()=>navigate('tables')}><PosIcon name="tables"/>Quản lý bàn</button></>}<button onClick={()=>navigate('revenue')}><PosIcon name="report"/>Báo cáo doanh thu</button><button onClick={()=>navigate('audit')}><PosIcon name="audit"/>Nhật ký hoạt động</button><button onClick={()=>navigate('invoices')}><PosIcon name="invoice"/>Hóa đơn gần đây</button></div></details>}
  </nav><div className="sync-tools"><span className={syncError?'connection-status offline':'connection-status'}>{syncError?'Chưa đồng bộ':lastSync?'Đã kết nối':'Đang kết nối'}</span><button aria-label="Đồng bộ" title="Đồng bộ dữ liệu" onClick={()=>void refresh()}><PosIcon name="refresh"/><span>Đồng bộ</span></button></div></div>}
  <main className="app-main"><PWAControls/><OfflineNotice online={online}/>
  {error&&<aside className="notice error-notice" role="alert">{error}{!profile&&session&&<p><button onClick={()=>setReload(n=>n+1)}>Thử tải lại</button></p>}</aside>}
  {message&&<aside className="notice" role="status">{message}<button className="dismiss-notice" aria-label="Ẩn thông báo" onClick={()=>setMessage('')}>×</button></aside>}
- {loading?<div className="loading-state" role="status">Đang tải…</div>:!session?<div className="login-shell"><form className="login-form" onSubmit={login}><small>BÚN RIÊU GÓC PHỐ</small><h2>Đăng nhập nhân viên</h2><p>Chào ngày mới, sẵn sàng phục vụ.</p><label>Tên đăng nhập<input type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Mật khẩu<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy||!supabase} type="submit">{busy?'Đang đăng nhập…':'Đăng nhập'}</button></form></div>:profile?.must_change_password?<React.Suspense fallback={<p role="status">Đang tải thiết lập mật khẩu…</p>}><InitialPasswordSetup key={`initial-password:${session!.user.id}`} onBusy={setBusy} onCompleted={()=>setReload(n=>n+1)}/></React.Suspense>:profile&&<>
+ {loading?<div className="loading-state" role="status">Đang tải…</div>:recovering?<PasswordRecovery hasSession={!!session} onExit={async()=>{if(supabase&&session){const result=await supabase.auth.signOut({scope:'local'});if(result.error)throw result.error;}rememberRecovery(null);setRecovering(false);window.history.replaceState(null,'',window.location.pathname);}}/>:!session?<div className="login-shell"><form className="login-form" onSubmit={login}><small>BÚN RIÊU GÓC PHỐ</small><h2>Đăng nhập nhân viên</h2><p>Chào ngày mới, sẵn sàng phục vụ.</p><label>Tên đăng nhập<input type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Mật khẩu<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy||!supabase} type="submit">{busy?'Đang đăng nhập…':'Đăng nhập'}</button></form></div>:profile?.must_change_password?<React.Suspense fallback={<p role="status">Đang tải thiết lập mật khẩu…</p>}><InitialPasswordSetup key={`initial-password:${session!.user.id}`} onBusy={setBusy} onCompleted={()=>setReload(n=>n+1)}/></React.Suspense>:profile&&<>
  <div className={`workspace-heading${view==='kitchen'?' kitchen-heading':''}`}><div><div className="workspace-title-row"><h1>{titles[view]}</h1>{view==='kitchen'&&<KitchenTools key={`kitchen-tools:${session!.user.id}`} orders={cooking} ready={!!lastSync} onFreshChange={setFreshKitchenIds} onShowQueue={()=>setHistory(false)}/>}</div></div></div>
  {syncError&&<aside className="notice error-notice" role="alert">{syncError}</aside>}
  {pending&&<aside className="notice" role="status"><strong>Đơn chờ xác nhận — {placeName(pending.tableId)}</strong><ul>{pending.items.map((i,n)=><li key={n}>{i.qty} × {menu.find(m=>m.id===i.menu_item_id)?.name??i.menu_item_id}{i.note&&` · ${i.note}`}</li>)}</ul><p>Giữ nguyên mã gửi để tránh trùng đơn.</p><button disabled={sending||paymentPending||transferPending||tablePending||menuPending||billPending||cancelTablePending||itemCancelBusy} onClick={()=>void sendOrder()}>{sending?'Đang gửi…':'Thử gửi lại đơn này'}</button></aside>}
