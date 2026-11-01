@@ -1,7 +1,10 @@
 import {decodeImage} from '../supabase/functions/kitchen-image-upload/decode.ts';
-import {ImageMagick,MagickFormat,MagickColors} from '@imagemagick/magick-wasm';
+// @deno-types="../supabase/functions/kitchen-image-upload/magick.d.ts"
+import {ImageMagick,MagickFormat,MagickColors} from '../supabase/functions/kitchen-image-upload/magick.js';
 function assert(ok:boolean,message:string){if(!ok)throw new Error(message);}
 Deno.test('real WASM decode JPEG/PNG/WebP, re-encode, thumbnail, corruption and pixel limits',async()=>{
+ const compressed=await Deno.stat(new URL('../supabase/functions/kitchen-image-upload/magick.wasm.gz',import.meta.url));assert(compressed.size<6*1024*1024,'compact WASM asset');
+ const config=JSON.parse(await Deno.readTextFile(new URL('../supabase/functions/kitchen-image-upload/deno.json',import.meta.url)));assert(Object.keys(config.imports).length===0,'no full npm dependency in Edge graph');
  const original=await Deno.readFile(new URL('../public/brand/goc-pho-logo.webp',import.meta.url));
  const first=await decodeImage(original,'image/webp');assert(first.width===256&&first.height===256,'webp dimensions');
  for(const [format,mime] of [[MagickFormat.Jpeg,'image/jpeg'],[MagickFormat.Png,'image/png']] as const){

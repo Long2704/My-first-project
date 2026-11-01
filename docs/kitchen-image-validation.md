@@ -46,10 +46,16 @@ Vì vậy chưa xác nhận được:
 - `src/kitchen-images/`: KitchenImageArea, KitchenImageUpload, KitchenImageTicket, KitchenImageZoom, PrivateImage, private-images, types, CSS.
 - `supabase/migrations/034_kitchen_image_tickets.sql`: hai bảng, indexes, quyền, RLS, RPC, bucket và Storage guards.
 - `supabase/rollbacks/034_kitchen_image_tickets.sql`: vô hiệu hóa, giữ dữ liệu.
-- `supabase/functions/kitchen-image-upload/`: index, handler, decoder, deno.json/lock. Asset `magick.wasm` tạo bằng script, không commit/không vào frontend.
+- `supabase/functions/kitchen-image-upload/`: index, handler, decoder, deno.json/lock. Các asset JS/typings/WASM gzip tạo bằng script, không commit/không vào frontend.
 - `supabase/config.toml`: cấu hình function và static WASM.
 - `scripts/prepare-kitchen-image-wasm.mjs`: tải phụ thuộc đã ghim, kiểm checksum, tạo asset và NOTICE giấy phép.
 - `tests/kitchen-images-{sql,edge,flow,concurrency}.mjs`, `tests/kitchen-images-decode.ts`, helper sales-isolation và tích hợp vào test 033.
 - `tests/kitchen-access-flow.mjs`: sửa selectors/điều hướng lỗi thời, thêm POS_TEST_URL.
 - `.gitignore`, `package.json`: loại asset phát sinh và thêm lệnh chuẩn bị/kiểm thử.
 - Hai tài liệu `docs/kitchen-image-tickets.md`, `docs/kitchen-image-validation.md`.
+
+## Sửa lỗi deploy HTTP 413
+
+Báo cáo từ máy Windows: Management API trả `request entity too large`. Đã thay asset WASM thô 15.425.791 byte bằng gzip 5.320.849 byte; không import gói npm đầy đủ vào Edge graph. JS/typings/NOTICE được chuẩn bị cục bộ, từng file kiểm SHA-256; tổng bộ xử lý 5,89 MiB và có chốt ngân sách 6 MiB. Xóa asset WASM thô cũ để tránh gửi trùng. Runtime giải nén và kiểm lại SHA-256 trước khởi tạo; không giảm kiểm tra ảnh hoặc phân quyền.
+
+Đã kiểm tra chuẩn bị gói mới, Deno check, giải mã JPEG/PNG/WebP thật, ảnh lỗi/giới hạn pixel và Edge handler. Cần người dùng deploy lại để xác nhận API Supabase chấp nhận gói mới; chưa ghi nhận deploy thành công.

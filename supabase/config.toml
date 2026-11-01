@@ -2,4 +2,4 @@
 [functions.kitchen-image-upload]
 verify_jwt = true
 import_map = "./functions/kitchen-image-upload/deno.json"
-static_files = ["./functions/kitchen-image-upload/magick.wasm", "./functions/kitchen-image-upload/magick.NOTICE"]
+static_files = ["./functions/kitchen-image-upload/magick.wasm.gz", "./functions/kitchen-image-upload/magick.NOTICE"]

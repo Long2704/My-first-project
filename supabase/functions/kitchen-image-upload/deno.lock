@@ -1,16 +1,1 @@
-{
-  "version": "5",
-  "specifiers": {
-    "npm:@imagemagick/magick-wasm@0.0.45": "0.0.45"
-  },
-  "npm": {
-    "@imagemagick/magick-wasm@0.0.45": {
-      "integrity": "sha512-ef8FHka4xLWo5/tGTV6P45bPjTvnKZz/oHN6sCDTbY8zaCdM2MeaoQHLsy9IHuiVHQhomG3TQ6ErgTnEDyuzvw=="
-    }
-  },
-  "workspace": {
-    "dependencies": [
-      "npm:@imagemagick/magick-wasm@0.0.45"
-    ]
-  }
-}
+{"version":"5"}
