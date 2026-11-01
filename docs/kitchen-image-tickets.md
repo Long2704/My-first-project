@@ -5,9 +5,9 @@ Giai đoạn đầu chỉ viết mã và kiểm thử cục bộ theo yêu cầu
 
 ## Chức năng và dữ liệu
 
-Owner vào Bếp → **Tải ảnh lên**, chọn một hoặc nhiều ảnh rồi **Gửi ảnh** cho từng ảnh. Mỗi ảnh tạo một phiếu riêng. Trạng thái chờ/đang tải/đã tải/lỗi tách riêng. Khi lỗi, giữ ảnh và dùng **Thử lại**; tải lại trang thì chọn lại đúng ảnh để dùng lại mã yêu cầu cũ. Khi server đã xác nhận thành công, chọn lại ảnh đó trong một lượt mới có thể tạo phiếu mới theo chủ ý.
+Owner vào Bếp → nút **Tải ảnh lên** cạnh **Lịch sử**; chọn một hoặc nhiều ảnh là tự tải tuần tự, không có bước Gửi ảnh hay xác nhận. Mỗi ảnh tạo một phiếu riêng. Trạng thái chờ/đang tải/đã tải/lỗi tách riêng. Khi lỗi, giữ ảnh và dùng **Thử lại**; tải lại trang thì chọn lại đúng ảnh để dùng lại mã yêu cầu cũ. Khi server đã xác nhận thành công, chọn lại ảnh đó trong một lượt mới có thể tạo phiếu mới theo chủ ý.
 
-Đơn thường giữ nguyên và luôn đứng trước phiếu ảnh trong danh sách. Phiếu ảnh đang làm xếp `created_at, id` tăng dần; lịch sử xếp thời điểm hoàn thành giảm dần. Tải 40 phiếu/lần, **Xem thêm phiếu ảnh** để tăng số lượng. Lịch sử ảnh không phụ thuộc bàn mở. Owner/Kitchen chạm ảnh hoặc **Xem ảnh lớn**, vuốt ngang hai chiều hoặc bấm **Xong**. Phiếu chỉ rời hàng chờ sau ACK hợp lệ. Hai kết nối hoàn thành cùng phiếu nhận cùng người/thời điểm đầu tiên.
+Theo yêu cầu tiếp theo của người dùng, danh sách **Đang làm** gộp đơn thường và phiếu ảnh theo `created_at` tăng dần, dùng khóa loại/id khi trùng thời điểm; đơn mới xuất hiện sau ảnh cũ. Thay đổi này thay thế ưu tiên đơn thường đứng trước ảnh của phiên bản đầu. Trong lịch sử, giữ cách hiển thị trước đó: đơn thường rồi phiếu ảnh; lịch sử xếp thời điểm hoàn thành giảm dần. Tải 40 phiếu/lần, **Xem thêm phiếu ảnh** để tăng số lượng. Lịch sử ảnh không phụ thuộc bàn mở. Owner/Kitchen chạm ảnh hoặc **Xem ảnh lớn**, vuốt ngang hai chiều hoặc bấm **Xong**. Phiếu chỉ rời hàng chờ sau ACK hợp lệ. Hai kết nối hoàn thành cùng phiếu nhận cùng người/thời điểm đầu tiên.
 
 JPG/PNG/WebP đầu vào tối đa 5 MiB; máy chủ kiểm tra magic bytes/MIME, giải mã thật bằng ImageMagick WASM 0.0.45, giới hạn 4096 px/chiều và 8 triệu pixel. Đọc khung hình đầu, áp dụng hướng EXIF, xóa metadata và tạo WebP sạch cùng ảnh xem trước cạnh dài tối đa 640 px, giữ tỷ lệ. File lỗi/ảnh lớn không tạo phiếu. WASM chỉ nằm trong Edge Function, không vào JS giao diện. Điện thoại chụp ảnh vượt giới hạn pixel cần giảm kích thước trước khi gửi; cần đánh giá trải nghiệm này trong thử nghiệm thiết bị thật.
 
@@ -41,7 +41,7 @@ Frontend chỉ lưu UUID/hash theo người dùng trong localStorage để retry
 3. Giải mã, ghi full/preview với `x-upsert=false`; không cho frontend tự chọn path.
 4. Service-only verify ghi metadata đã xác minh. Finalize bằng JWT Owner kiểm tra quyền lại, khóa request/lượt tải và chỉ tạo phiếu từ lượt verified chưa hết hạn.
 5. Nếu ACK mất sau commit, gửi lại cùng UUID/hash trả phiếu cũ. Nếu mới tải một phần, không có phiếu; sau 2 phút có thể thử lượt mới với cùng UUID, path khác. Nếu quyền bị thu hồi giữa chừng, finalize thất bại và ảnh nằm trong ledger chờ dọn.
-6. Owner mở **Ảnh tải dở → Dọn ảnh tải dở**. Chỉ claim tối đa 10 lượt hết hạn hơn 1 giờ/đợt và không được tham chiếu bởi phiếu. Claim khóa dòng, chuyển sang cleaning để finalize không chạy lại; Edge xóa qua Storage API, thành công mới mark cleaned. Lỗi delete vẫn giữ cleaning và có thể thử lại. Không xóa ảnh của phiếu đang làm hoặc lịch sử. Không có cron hay tự xóa lịch sử.
+6. Endpoint bảo trì `cleanup` vẫn chỉ dành cho Owner; giao diện tải dở đã gỡ để giữ thanh công cụ gọn theo yêu cầu tiếp theo. Chỉ claim tối đa 10 lượt hết hạn hơn 1 giờ/đợt và không được tham chiếu bởi phiếu. Claim khóa dòng, chuyển sang cleaning để finalize không chạy lại; Edge xóa qua Storage API, thành công mới mark cleaned. Lỗi delete vẫn giữ cleaning và có thể thử lại. Không xóa ảnh của phiếu đang làm hoặc lịch sử. Không có cron hay tự xóa lịch sử.
 
 ## Cách ly nghiệp vụ
 
