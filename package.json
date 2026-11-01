@@ -64,7 +64,11 @@
     "test:staff-table-cancel": "node tests/staff-table-cancellation-sql.mjs",
     "test:staff-table-cancel-ui": "node tests/staff-table-cancellation-flow.mjs",
     "test:payment-layout": "node tests/payment-layout-flow.mjs",
-    "test:reorder-saved": "node tests/reorder-saved-flow.mjs"
+    "test:reorder-saved": "node tests/reorder-saved-flow.mjs",
+    "test:kitchen-images": "node tests/kitchen-images-sql.mjs && node tests/kitchen-image-wasm-loader.mjs && node tests/kitchen-images-edge.mjs && node tests/staff-table-cancellation-sql.mjs",
+    "test:kitchen-images-ui": "node tests/kitchen-images-flow.mjs",
+    "test:kitchen-images-concurrency": "node tests/kitchen-images-concurrency.mjs",
+    "prepare:kitchen-image-wasm": "node scripts/prepare-kitchen-image-wasm.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

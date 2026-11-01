@@ -1,3 +1,4 @@
+import {checkKitchenImageIsolation} from './support/kitchen-image-sales-isolation.mjs';
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
@@ -135,6 +136,7 @@ try {
   await db.exec('reset role');await db.query('update public.profiles set must_change_password=false,staff_sessions_revoked_before=clock_timestamp() where id=$1',[uid(2)]);await asUser(2);assert.equal(await permission('tables.cancel'),false);await assert.rejects(cancel(active,request,[foodId]),/không có quyền/);
   await db.exec('reset role');await db.query('update public.profiles set staff_sessions_revoked_before=null,is_active=false,deleted_at=clock_timestamp() where id=$1',[uid(2)]);await asUser(2);assert.equal(await permission('tables.cancel'),false);
   await db.exec('reset role');const ledger=(await db.query('select * from public.table_cancellations order by request_id')).rows;
+  await checkKitchenImageIsolation(db,uid(1),uid(3));
   await db.exec(readFileSync(new URL('../supabase/rollbacks/033_staff_table_cancellation.sql',import.meta.url),'utf8'));
   for(const n of [2,3]){await asUser(n);assert.equal(await permission('tables.cancel'),false);await assert.rejects(cancel(active,request,[foodId]),/không có quyền hủy bàn/);}
   await db.exec('reset role');assert.deepEqual((await db.query('select * from public.table_cancellations order by request_id')).rows,ledger);assert.deepEqual(await snapshot('bills'),paidBills);assert.deepEqual(await snapshot('bill_items'),paidBillItems);

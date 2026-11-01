@@ -1,0 +1,5 @@
+# Local function configuration. This does not link or deploy any project.
+[functions.kitchen-image-upload]
+verify_jwt = true
+import_map = "./functions/kitchen-image-upload/deno.json"
+static_files = ["./functions/kitchen-image-upload/magick.NOTICE"]
