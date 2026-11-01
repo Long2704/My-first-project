@@ -58,6 +58,7 @@ export function createKitchenImageHandler(settings:Settings){
    if(file.type&&file.type!==mime)return reply(400,{error:'Nội dung ảnh khác định dạng đã chọn.'});
    const sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
    const job=await rpc('reserve_kitchen_image_upload',{p_request_id:requestId,p_sha256:sha256});
+   if(job.expired)return reply(200,{expired:true});
    if(job.ticket)return reply(200,{ticket:job.ticket});
    if(!job.verified){
     const decoded=await settings.decode(bytes,mime);

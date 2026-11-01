@@ -3,6 +3,7 @@ import {supabase} from '../supabase';
 type Upload={id:string;hash:string;file:File};
 type Failure={id:string;name:string;message:string;upload?:Upload};
 const maxBytes=5*1024*1024;
+class ExpiredImageRequest extends Error{}
 export default function KitchenImageUpload({userId,online,onUploaded}:{userId:string;online:boolean;onUploaded:()=>void}){
  const [failures,setFailures]=useState<Failure[]>([]),[busy,setBusy]=useState(false),[progress,setProgress]=useState('');
  const lock=useRef(false),input=useRef<HTMLInputElement>(null),alive=useRef(true);
@@ -17,6 +18,7 @@ export default function KitchenImageUpload({userId,online,onUploaded}:{userId:st
    if(response instanceof Response){const details=await response.clone().json().catch(()=>null);if(typeof details?.error==='string')throw new Error(details.error.slice(0,300));}
    throw new Error('Chưa xác nhận được. Thử lại sau ít phút.');
   }
+  if(data?.expired){localStorage.removeItem(`goc-pho-image-upload:${userId}:${item.hash}`);throw new ExpiredImageRequest('Phiếu đã hoàn thành hoặc mã tải đã hết hiệu lực. Chọn ảnh lại nếu muốn tạo phiếu mới.');}
   if(!data?.ticket?.id)throw new Error('Chưa xác nhận được. Thử lại sau ít phút.');
   try{localStorage.removeItem(`goc-pho-image-upload:${userId}:${item.hash}`);}catch{/* Server ACK is authoritative; retain the UUID if local cleanup fails. */}
   if(alive.current){setFailures(old=>old.filter(f=>f.id!==item.id));onUploaded();}
@@ -33,15 +35,20 @@ export default function KitchenImageUpload({userId,online,onUploaded}:{userId:st
      const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer())),n=>n.toString(16).padStart(2,'0')).join('');
      if(seen.has(hash))continue;seen.add(hash);
      const key=`goc-pho-image-upload:${userId}:${hash}`;
-     let id=localStorage.getItem(key);if(!id){id=crypto.randomUUID();localStorage.setItem(key,id);}
+     let id=localStorage.getItem(key);
+     if(!id){
+      const {data:epoch,error}=await supabase!.rpc('get_kitchen_image_epoch');
+      if(error||typeof epoch!=='string'||!/^[0-9a-f]{12}$/.test(epoch))throw new Error('Chưa đọc được mã tải ảnh. Kiểm tra cập nhật SQL 035.');
+      const random=crypto.randomUUID();id=`${epoch.slice(0,8)}-${epoch.slice(8)}-${random.slice(14)}`;localStorage.setItem(key,id);
+     }
      item={id,hash,file};await upload(item);
-    }catch(error){failed({id:item?.id??`prepare:${file.name}`,name:file.name,upload:item,message:error instanceof Error&&error.message?error.message:'Chưa chuẩn bị được ảnh. Thử lại.'});}
+    }catch(error){failed({id:item?.id??`prepare:${file.name}`,name:file.name,upload:error instanceof ExpiredImageRequest?undefined:item,message:error instanceof Error&&error.message?error.message:'Chưa chuẩn bị được ảnh. Thử lại.'});}
    }
   }finally{lock.current=false;if(alive.current){setBusy(false);setProgress('');if(input.current)input.current.value='';}}
  }
  async function retry(item:Upload){
   if(lock.current||!online||!navigator.onLine)return;lock.current=true;setBusy(true);setProgress('Đang tải…');
-  try{await upload(item);}catch(error){failed({id:item.id,name:item.file.name,upload:item,message:error instanceof Error&&error.message?error.message:'Chưa xác nhận được. Thử lại.'});}
+  try{await upload(item);}catch(error){failed({id:item.id,name:item.file.name,upload:error instanceof ExpiredImageRequest?undefined:item,message:error instanceof Error&&error.message?error.message:'Chưa xác nhận được. Thử lại.'});}
   finally{lock.current=false;if(alive.current){setBusy(false);setProgress('');}}
  }
  return <div className="kitchen-image-upload">
