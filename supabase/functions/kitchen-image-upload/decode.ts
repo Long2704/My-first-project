@@ -1,21 +1,17 @@
 // @deno-types="./magick.d.ts"
 import {ImageMagick,initializeImageMagick,MagickFormat,MagickReadSettings,ResourceLimits} from './magick.js';
 import type {DecodedImage} from './handler.ts';
+import {loadVerifiedWasm} from './wasm-loader.ts';
 let ready:Promise<void>|undefined;
 // One synchronous decode per isolate. Explicit format prevents SVG/PDF/delegate decoding.
 async function initialize(){
- const compressed=await Deno.readFile(new URL('./magick.wasm.gz',import.meta.url));
- const stream=new Response(compressed).body!.pipeThrough(new DecompressionStream('gzip'));
- const wasm=new Uint8Array(await new Response(stream).arrayBuffer());
- const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',wasm)),n=>n.toString(16).padStart(2,'0')).join('');
- if(digest!=='54629cbcf06dd10db38b4d87fa6ab241b248c09c94f2d9689506e5f994ac5f0c')throw new Error('Image processor checksum mismatch.');
- await initializeImageMagick(wasm);
+ await initializeImageMagick(await loadVerifiedWasm());
  ResourceLimits.width=4096n;ResourceLimits.height=4096n;ResourceLimits.area=8000000n;
  ResourceLimits.memory=96n*1024n*1024n;ResourceLimits.maxMemoryRequest=96n*1024n*1024n;
  ResourceLimits.disk=0n;ResourceLimits.listLength=4n;ResourceLimits.maxProfileSize=1024n*1024n;ResourceLimits.time=10n;
 }
 export async function decodeImage(bytes:Uint8Array,mime:string):Promise<DecodedImage>{
- await (ready??=initialize());
+ await (ready??=initialize().catch(error=>{ready=undefined;throw error;}));
  const format=mime==='image/jpeg'?MagickFormat.Jpeg:mime==='image/png'?MagickFormat.Png:MagickFormat.WebP;
  const settings=new MagickReadSettings();settings.format=format;settings.frameIndex=0;settings.frameCount=1;
  try{return ImageMagick.read(bytes,settings,image=>{

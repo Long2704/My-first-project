@@ -59,3 +59,11 @@ Vì vậy chưa xác nhận được:
 Báo cáo từ máy Windows: Management API trả `request entity too large`. Đã thay asset WASM thô 15.425.791 byte bằng gzip 5.320.849 byte; không import gói npm đầy đủ vào Edge graph. JS/typings/NOTICE được chuẩn bị cục bộ, từng file kiểm SHA-256; tổng bộ xử lý 5,89 MiB và có chốt ngân sách 6 MiB. Xóa asset WASM thô cũ để tránh gửi trùng. Runtime giải nén và kiểm lại SHA-256 trước khởi tạo; không giảm kiểm tra ảnh hoặc phân quyền.
 
 Đã kiểm tra chuẩn bị gói mới, Deno check, giải mã JPEG/PNG/WebP thật, ảnh lỗi/giới hạn pixel và Edge handler. Cần người dùng deploy lại để xác nhận API Supabase chấp nhận gói mới; chưa ghi nhận deploy thành công.
+
+## Lỗi 413 tiếp tục sau gói gzip — phương án hiện tại
+
+Người dùng vẫn nhận HTTP 413 khi deploy gói 5,89 MiB qua Management API. Chưa có số liệu kích thước request thực hoặc giới hạn cụ thể từ API, nên không khẳng định giới hạn là bao nhiêu. Đã bỏ hoàn toàn WASM khỏi static deploy assets, chỉ đóng gói JS/typings/NOTICE đã kiểm hash, tổng 0,71 MiB. Script xóa cả hai file WASM thô/gzip cũ.
+
+`wasm-loader.ts` chỉ tải URL cố định phiên bản 0.0.45 từ cdn.jsdelivr.net, timeout 20 giây, không credentials/headers người dùng, cấm redirect, đọc stream giới hạn chính xác 15.425.791 byte và xác minh SHA-256 trước khi khởi tạo. Isolate giữ thư viện đã khởi tạo; nếu khởi tạo lỗi thì cho phép thử lại. Không bỏ kiểm tra định dạng ảnh hoặc quyền upload. Giới hạn mới: lần tải đầu cần CDN sẵn sàng và outbound HTTPS; ảnh người dùng không được gửi lên CDN.
+
+Đã chạy đạt: chuẩn bị gói 0,71 MiB; Deno check; Deno tải thực từ CDN và giải mã JPEG/PNG/WebP cùng kiểm tra ảnh hỏng/kích thước; unit test loader chặn status lỗi, thiếu/thừa byte, sai hash và kiểm tra không gửi credentials. Edge handler test vẫn đạt. Chưa xác nhận deploy Supabase thành công; cần người dùng triển khai gói mới và đối chiếu endpoint.
