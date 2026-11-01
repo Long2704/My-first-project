@@ -11,3 +11,6 @@ supabase/functions/kitchen-image-upload/magick.NOTICE
 supabase/functions/kitchen-image-upload/magick.wasm.gz
 supabase/functions/kitchen-image-upload/magick.js
 supabase/functions/kitchen-image-upload/magick.d.ts
+
+# Supabase CLI runtime state; never publish credentials or local links.
+supabase/.temp/

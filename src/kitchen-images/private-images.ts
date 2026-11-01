@@ -20,7 +20,7 @@ export function createPrivateImages(){
     next.promise=(async()=>{
      if(!supabase)throw new Error();
      const {data,error}=await supabase.storage.from('kitchen-ticket-images').download(path,{}, {cache:'no-store'});
-     if(error||!data||disposed||currentGeneration!==generation)throw new Error('Chưa tải được ảnh.');
+     if(error||!data||disposed||currentGeneration!==generation||entries.get(path)!==next)throw new Error('Chưa tải được ảnh.');
      next.bytes=data.size;next.url=URL.createObjectURL(data);prune();return next.url;
     })().catch(error=>{if(entries.get(path)===next)entries.delete(path);throw error;});
     entries.set(path,next);entry=next;
@@ -28,6 +28,7 @@ export function createPrivateImages(){
    entry.refs++;entry.touched=Date.now();const captured=entry;
    return {promise:entry.promise,release(){captured.refs=Math.max(0,captured.refs-1);prune();}};
   },
+  remove(path:string){const entry=entries.get(path);if(entry?.url)URL.revokeObjectURL(entry.url);entries.delete(path);},
   dispose(){disposed=true;generation++;for(const e of entries.values())if(e.url)URL.revokeObjectURL(e.url);entries.clear();},
  };
 }

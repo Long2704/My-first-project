@@ -1,5 +1,7 @@
 # Phiếu ảnh Bếp — bàn giao thử nghiệm
 
+Cập nhật mới: yêu cầu ảnh tạm/xóa sau hoàn thành và reset dữ liệu thử xem `docs/temporary-kitchen-images-and-trial-reset.md`; quy tắc lưu lịch sử ảnh bên dưới là phiên bản 034 trước thay đổi này.
+
 Nhánh cục bộ: `feat/kitchen-image-tickets`. Nền: main `6963f5060112bfd38ea866edd3dcc182e294faa4`.
 Giai đoạn đầu chỉ viết mã và kiểm thử cục bộ theo yêu cầu. Ngày 2026-11-01, người dùng tiếp tục cho phép tự kiểm chứng và tích hợp bản thật. Quy trình hiện tại: công bố nhánh/PR và kiểm tra preview, xác minh backend thử nghiệm, sau đó mới áp dụng backend và merge production. Chưa có kết nối Supabase quản trị trong môi trường; chưa chạy SQL hoặc deploy function vào project thật.
 

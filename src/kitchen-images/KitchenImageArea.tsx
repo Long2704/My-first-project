@@ -18,18 +18,21 @@ function AuthorizedImages({userId,canUpload,canComplete,online,history,normalCar
  const [tickets,setTickets]=useState<ImageTicket[]>([]),[limit,setLimit]=useState(40),[hasMore,setHasMore]=useState(false),[error,setError]=useState(''),[ready,setReady]=useState(false),[busy,setBusy]=useState(''),[revision,setRevision]=useState(0);
  const [cache]=useState(createPrivateImages);const alive=useRef(true),completeLock=useRef(false),confirmedDone=useRef(new Set<string>());
  useEffect(()=>{alive.current=true;cache.activate();return()=>{alive.current=false;cache.dispose();};},[cache]);
+ const previousTickets=useRef<ImageTicket[]>([]);
+ useEffect(()=>{const current=new Set(tickets.map(t=>t.id));for(const old of previousTickets.current)if(!current.has(old.id)){cache.remove(old.image_path);cache.remove(old.preview_path);}previousTickets.current=tickets;},[tickets,cache]);
  const reload=useCallback(()=>setRevision(n=>n+1),[]);
  useEffect(()=>{setLimit(40);setTickets([]);setReady(false);},[history]);
  useEffect(()=>{
+  if(history){setTickets([]);setReady(true);setHasMore(false);setError('');return;}
   if(!supabase||!online)return;let active=true,inFlight=false;
   async function refresh(){
    if(inFlight||!active||!supabase)return;inFlight=true;
    try{
-    const order=history?'completed_at':'created_at';
-    const {data,error:failure}=await supabase.from('kitchen_image_tickets').select(imageTicketFields).eq('status',history?'done':'cooking').order(order,{ascending:!history}).order('id',{ascending:!history}).range(0,limit);
+    const order='created_at';
+    const {data,error:failure}=await supabase.from('kitchen_image_tickets').select(imageTicketFields).eq('status','cooking').order(order,{ascending:true}).order('id',{ascending:true}).range(0,limit);
     if(!active)return;
     if(failure)throw failure;
-    const next=((data??[]).slice(0,limit) as ImageTicket[]).filter(t=>history||!confirmedDone.current.has(t.id));
+    const next=((data??[]).slice(0,limit) as ImageTicket[]).filter(t=>!confirmedDone.current.has(t.id));
     setTickets(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);setHasMore((data?.length??0)>limit);setReady(true);setError('');
    }catch{if(active)setError('Chưa đồng bộ được phiếu ảnh. Đơn bếp thường vẫn hoạt động.');}
    finally{inFlight=false;}
@@ -41,15 +44,24 @@ function AuthorizedImages({userId,canUpload,canComplete,online,history,normalCar
   if(completeLock.current||!online||!navigator.onLine||!supabase||!canComplete)return;
   completeLock.current=true;setBusy(id);setError('');
   try{
-   const {data,error:failure}=await supabase.rpc('complete_kitchen_image_ticket',{p_ticket_id:id});
-   if(failure||!data||data.id!==id||data.status!=='done')throw new Error();
+   const begun=await supabase.rpc('begin_kitchen_image_completion',{p_ticket_id:id});
+   if(begun.error||!begun.data||begun.data.id!==id)throw new Error();
+   if(!begun.data.purged){
+    const paths=begun.data.paths;
+    if(!Array.isArray(paths)||paths.length<2||paths.some(p=>typeof p!=='string'||!p))throw new Error();
+    let storageError:unknown=null;
+    for(let offset=0;offset<paths.length;offset+=100){const removed=await supabase.storage.from('kitchen-ticket-images').remove(paths.slice(offset,offset+100));if(removed.error)storageError=removed.error;}
+    const finished=await supabase.rpc('complete_kitchen_image_ticket',{p_ticket_id:id});
+    if(finished.error||finished.data?.id!==id||finished.data?.purged!==true)throw storageError??finished.error??new Error();
+    paths.forEach((path:string)=>cache.remove(path));
+   }
    if(alive.current){confirmedDone.current.add(id);setTickets(old=>old.filter(t=>t.id!==id));reload();}
   }catch{if(alive.current)setError('Chưa xác nhận hoàn thành. Phiếu được giữ lại; thử lại khi có mạng.');}
   finally{completeLock.current=false;if(alive.current)setBusy('');}
  }
  const cards=[
   ...normalCards.map(card=>({key:`order:${card.id}`,created_at:card.created_at,content:card.content})),
-  ...tickets.map(ticket=>({key:`image:${ticket.id}`,created_at:ticket.created_at,content:<KitchenImageTicket ticket={ticket} cache={cache} disabled={!online||!canComplete||!!busy||!!error||history} onComplete={()=>complete(ticket.id)}/>})),
+  ...(history?[]:tickets).map(ticket=>({key:`image:${ticket.id}`,created_at:ticket.created_at,content:<KitchenImageTicket ticket={ticket} cache={cache} disabled={!online||!canComplete||!!busy||!!error||history} onComplete={()=>complete(ticket.id)}/>})),
  ];
  if(!history)cards.sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at)||a.key.localeCompare(b.key));
  return <>

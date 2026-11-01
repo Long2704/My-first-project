@@ -19,6 +19,7 @@ import MenuPanel from './MenuPanel';
 import BillPanel from './BillPanel';
 import KitchenTools from './KitchenTools';
 import KitchenImageArea from './kitchen-images/KitchenImageArea';
+import {syncDataEpoch} from './data-epoch';
 const InvoiceHistory=React.lazy(()=>import('./InvoiceHistory'));
 const EmployeeManagement=React.lazy(()=>import('./EmployeeManagement'));
 const InitialPasswordSetup=React.lazy(()=>import('./InitialPasswordSetup'));
@@ -32,7 +33,7 @@ import {formatMoney as money} from './format';
 type View='employees'|'tables'|'service'|'kitchen'|'menu'|'revenue'|'audit'|'invoices';
 type Item={id:string;name:string;price:number;category:string;is_out:boolean};
 type DiningTable={id:number;name:string};
-type Profile={name:string;role:string;is_active:boolean;permissions:string[];must_change_password?:boolean;session_invalid?:boolean};
+type Profile={name:string;role:string;is_active:boolean;permissions:string[];must_change_password?:boolean;session_invalid?:boolean;data_epoch?:number};
 const permitted=(profile:Profile|null,permission:string)=>!!profile?.is_active&&profile.permissions.includes(permission);
 function checkedAccess(data:unknown):Profile{
  const p=data as Partial<Profile>|null;
@@ -109,6 +110,7 @@ function App(){
     const p=await supabase!.rpc('get_my_access');
     if(p.error)throw new Error('Không đọc được quyền nhân viên. Kiểm tra migration 023 và kết nối.');
     const access=checkedAccess(p.data);
+    if(syncDataEpoch(user,access.data_epoch)){setError('');setPending(null);setDrafts({});setNotes({});}
     if(access.must_change_password){if(active){setProfile(access);setView('service');}return;}
     const [m,t]=await Promise.all([supabase!.from('menu_items').select('id,name,price,category,is_out').eq('is_active',true).order('sort').order('id'),supabase!.from('restaurant_tables').select('id,name').eq('is_active',true).order('display_order').order('id')]);
     if(m.error||t.error)throw new Error('Không tải được thực đơn hoặc danh sách bàn.');
@@ -134,6 +136,7 @@ function App(){
     return;
    }
    if(access.must_change_password){setProfile(access);setMenu([]);setTables([]);setSessions([]);setCooking([]);setSelected(null);setReceiptRequest(null);setLastSync('');return;}
+   if(syncDataEpoch(user,access.data_epoch)){setError('');setPending(null);setDrafts({});setNotes({});setSelected(null);setReceiptRequest(null);setReload(n=>n+1);return;}
    setProfile(prev=>JSON.stringify(prev)===JSON.stringify(access)?prev:access);
    setView(current=>{
     if(current==='invoices'&&access.role==='bep')return 'kitchen';

@@ -1,3 +1,4 @@
+import {checkTrialReset} from './trial-reset-isolation.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 // Extend the existing complete 001–033 business fixture; compare actual financial/table/report snapshots.
@@ -11,7 +12,7 @@ export async function checkKitchenImageIsolation(db,owner,kitchen){
  };
  await db.exec('reset role');const before=await snapshot();
  await as(owner);const reportBefore=await one("select public.revenue_report(current_date-1,current_date+1)-'generated_at' result");
- await db.exec(`reset role;create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;alter table storage.buckets enable row level security;`);
+ await db.exec(`reset role;create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,metadata jsonb not null default '{}');alter table storage.objects enable row level security;alter table storage.buckets enable row level security;grant usage on schema storage to authenticated;grant select,delete on storage.objects to authenticated;`);
  await db.exec(sql('migrations/034_kitchen_image_tickets.sql'));
  await as(owner);const job=(await one("select public.reserve_kitchen_image_upload(gen_random_uuid(),$1) result",['c'.repeat(64)])).result;
  await db.exec('reset role;set role service_role');await db.query('select public.verify_kitchen_image_upload($1,1000,800,600)',[job.upload_id]);
@@ -19,6 +20,9 @@ export async function checkKitchenImageIsolation(db,owner,kitchen){
  await as(kitchen);await db.query('select public.complete_kitchen_image_ticket($1)',[ticket.id]);
  await as(owner);assert.deepEqual(await one("select public.revenue_report(current_date-1,current_date+1)-'generated_at' result"),reportBefore);
  await db.exec('reset role');assert.deepEqual(await snapshot(),before);
+ await db.exec(sql('migrations/035_temporary_kitchen_images.sql'));
+ await checkTrialReset(db,owner,'10000000-0000-0000-0000-000000000001');
+ await db.exec(sql('rollbacks/035_temporary_kitchen_images.sql'));
  await db.exec(sql('rollbacks/034_kitchen_image_tickets.sql'));assert.deepEqual(await snapshot(),before);
  console.log('ĐẠT cách ly 034 trên fixture nghiệp vụ 001–033: tạo/hoàn thành/rollback phiếu ảnh giữ nguyên orders, items, sessions, bills, bill_items, tables, cancellations, audit và kết quả revenue_report thực tế.');
 }
