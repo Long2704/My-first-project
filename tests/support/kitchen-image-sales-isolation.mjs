@@ -1,3 +1,4 @@
+import {checkRevenueTime} from './revenue-time-isolation.mjs';
 import {checkTrialReset} from './trial-reset-isolation.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -21,6 +22,7 @@ export async function checkKitchenImageIsolation(db,owner,kitchen){
  await as(owner);assert.deepEqual(await one("select public.revenue_report(current_date-1,current_date+1)-'generated_at' result"),reportBefore);
  await db.exec('reset role');assert.deepEqual(await snapshot(),before);
  await db.exec(sql('migrations/035_temporary_kitchen_images.sql'));
+ await checkRevenueTime(db,owner);
  await checkTrialReset(db,owner,'10000000-0000-0000-0000-000000000001');
  await db.exec(sql('rollbacks/035_temporary_kitchen_images.sql'));
  await db.exec(sql('rollbacks/034_kitchen_image_tickets.sql'));assert.deepEqual(await snapshot(),before);
