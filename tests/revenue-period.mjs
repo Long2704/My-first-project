@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {reportTimestamp,validReportPeriod,reportPeriodLabel} from '../src/revenue-period.ts';
+import {revenueExport} from '../src/revenue-export.ts';
+assert.equal(reportTimestamp('2026-11-03','08:30'),'2026-11-03T08:30:00');
+assert.equal(reportTimestamp('2026-11-03','08:30:05'),'2026-11-03T08:30:05');
+for(const [d,t] of [['2026-02-30','08:30:00'],['2026-11-03','24:00:00'],['2026-11-03','01:60:00'],['2026-11-03','01:00:60'],['2026-11-03','01:00:00.1'],['2026-11-03',''],['0999-01-01','01:00:00']])assert.equal(reportTimestamp(d,t),null);
+assert.equal(validReportPeriod('2026-11-03T08:30:00','2026-11-03T08:29:59'),false);
+assert.equal(validReportPeriod('2026-11-03T08:30:00','2026-11-03T08:30:00'),true);
+assert.equal(validReportPeriod('2024-01-01T00:00:00','2024-12-31T23:59:59'),true);
+assert.equal(validReportPeriod('2024-01-01T00:00:00','2025-01-01T00:00:00'),false);
+assert.equal(reportPeriodLabel('2026-11-03T08:30:05'),'03/11/2026 08:30:05');
+const r={from:'2026-11-03T08:30:05',to:'2026-11-03T10:00:05',generated_at:'2026-11-03T04:00:00Z',products_complete:true,time_filter:true,invoices:1,gross:58000,discount:0,total:58000,cash:58000,transfer:0,days:[],products:[]};
+const file=revenueExport(r);assert.equal(file.filename,'goc-pho-doanh-thu_2026-11-03T08-30-05_2026-11-03T10-00-05.csv');assert.match(file.content,/"2026-11-03T08:30:05","2026-11-03T10:00:05"/);assert.ok(file.content.startsWith('\ufeff'));
+console.log('PASS report period: seconds normalization/calendar validation/equal bounds/366 days, VN labels and exact CSV boundaries with Windows-safe filename.');
