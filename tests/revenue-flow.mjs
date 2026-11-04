@@ -18,7 +18,7 @@ await context.route('https://uiwzinyckukaqlbznnam.supabase.co/**',async route=>{
  else if(u.pathname==='/rest/v1/restaurant_tables')body=Array.from({length:12},(_,i)=>({id:i+1,name:`Bàn ${i+1}`}));
  else if(u.pathname==='/rest/v1/table_sessions')body=sessions.filter(s=>!s.closed);
  else if(u.pathname==='/rest/v1/orders')body=sessions.flatMap(s=>s.orders.filter(o=>o.status==='cooking').map(o=>({...o,table_sessions:{table_id:s.table_id,closed_at:s.closed?'2026-10-27':null}})));
- else if(u.pathname==='/rest/v1/rpc/get_sales_retention_status')body={enabled:true,scheduled:true,next_run:'2026-11-08T20:00:00Z',eligible:{sessions:2,orders:3,invoices:2},last_run:null};
+ else if(u.pathname==='/rest/v1/rpc/get_sales_retention_status')body={retention_days:7,enabled:true,scheduled:true,next_run:'2026-11-08T20:00:00Z',eligible:{sessions:2,orders:3,invoices:2},last_run:null};
  else if(u.pathname==='/rest/v1/rpc/set_sales_retention_enabled')body=null;
  else if(u.pathname==='/rest/v1/rpc/revenue_report_window'){
   const p=req.postDataJSON();reportCalls.push(p);

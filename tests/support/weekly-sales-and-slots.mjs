@@ -9,6 +9,7 @@ export async function checkWeeklySalesAndSlots(db,owner){
  const financial=['orders','order_items','bills','bill_items','bill_orders','table_sessions','audit_log'];
  const before=await snapshot(financial);
  await db.exec(sql('migrations/036_revenue_time_filter.sql'));await db.exec(sql('migrations/037_revenue_time_slots.sql'));await db.exec(sql('migrations/038_weekly_sales_retention.sql'));
+ await db.exec(sql('migrations/039_sales_retention_seven_days.sql'));
  assert.deepEqual(await snapshot(financial),before,'install never deletes sales');
  assert.equal((await one('select enabled from public.sales_retention_settings')).enabled,false);
  await db.exec('begin');
@@ -16,7 +17,7 @@ export async function checkWeeklySalesAndSlots(db,owner){
  try{
   const protectedBefore=await snapshot(['menu_items','restaurant_tables','profiles','kitchen_image_tickets','kitchen_image_uploads']);
   const food=await one("select * from public.menu_items where category='bun' and is_active and not is_out limit 1");
-  async function sale({age=35,done=true,table=1}={}){
+  async function sale({age=8,done=true,table=1}={}){
    await as();const request=crypto.randomUUID(),order=(await one('select public.submit_order($1,$2,$3::jsonb) id',[table,request,JSON.stringify([{menu_item_id:food.id,qty:1,expected_price:food.price}])])).id;
    const session=(await one('select session_id from public.orders where id=$1',[order])).session_id;
    if(done)await one('select public.complete_kitchen_order($1)',[order]);
@@ -38,20 +39,20 @@ export async function checkWeeklySalesAndSlots(db,owner){
   const partial=(await one("select public.revenue_report_window('2088-02-04 09:00:00','2088-02-04 09:00:00') r")).r;assert.equal(partial.invoices,1);assert.equal(partial.slots[1].invoices,1);
   const across=(await one("select public.revenue_report_window('2088-02-04 21:59:59','2088-02-05 06:00:00') r")).r;assert.equal(across.slots.length,14);assert.equal(across.invoices,2);
   await db.exec('reset role');
-  const old=await sale(),recent=await sale({age:2}),unfinished=await sale({done:false});
+  const old=await sale(),recent=await sale({age:6}),unfinished=await sale({done:false});
   const recentPaid=await sale();await db.query("update public.bills set paid_at=statement_timestamp()-interval '2 days' where id=$1",[recentPaid.bill]);
   const recentDone=await sale();await db.query("update public.orders set done_at=statement_timestamp()-interval '2 days' where id=$1",[recentDone.order]);
   const linkedOld=await sale(),linkedRecent=await sale({age:3});
   await db.query('insert into public.bill_orders(bill_id,order_id) values($1,$2)',[linkedOld.bill,linkedRecent.order]);
   const pairA=await sale(),pairB=await sale({table:2});
-  await db.query("insert into public.table_transfers(request_id,session_id,target_session_id,from_table,to_table,user_id,reason,created_at) values(gen_random_uuid(),$1,$2,1,2,$3,'Fixture',statement_timestamp()-interval '35 days')",[pairA.session,pairB.session,owner]);
+  await db.query("insert into public.table_transfers(request_id,session_id,target_session_id,from_table,to_table,user_id,reason,created_at) values(gen_random_uuid(),$1,$2,1,2,$3,'Fixture',statement_timestamp()-interval '8 days')",[pairA.session,pairB.session,owner]);
   await as();const openOrder=(await one('select public.submit_order(2,gen_random_uuid(),$1::jsonb) id',[JSON.stringify([{menu_item_id:food.id,qty:1}])])).id;
   await db.exec('reset role');const open=(await one('select session_id from public.orders where id=$1',[openOrder])).session_id;
-  await db.query("update public.orders set created_at=statement_timestamp()-interval '40 days' where id=$1",[openOrder]);await db.query("update public.table_sessions set opened_at=statement_timestamp()-interval '40 days' where id=$1",[open]);
+  await db.query("update public.orders set created_at=statement_timestamp()-interval '10 days' where id=$1",[openOrder]);await db.query("update public.table_sessions set opened_at=statement_timestamp()-interval '10 days' where id=$1",[open]);
   await as();const cancelRequest=crypto.randomUUID(),cancelOrder=(await one('select public.submit_order(1,$1,$2::jsonb) id',[cancelRequest,JSON.stringify([{menu_item_id:food.id,qty:1}])])).id;
   const cancelled=(await one('select session_id from public.orders where id=$1',[cancelOrder])).session_id;
   const cancelItems=(await db.query('select id from public.order_items where order_id=$1',[cancelOrder])).rows.map(x=>x.id);await one('select public.cancel_table_session($1,gen_random_uuid(),$2::uuid[])',[cancelled,cancelItems]);
-  await db.exec('reset role');await db.query("update public.table_sessions set opened_at=statement_timestamp()-interval '40 days',closed_at=statement_timestamp()-interval '40 days' where id=$1",[cancelled]);await db.query("update public.orders set created_at=statement_timestamp()-interval '40 days',done_at=statement_timestamp()-interval '40 days' where id=$1",[cancelOrder]);await db.query("update public.order_items set cancelled_at=statement_timestamp()-interval '40 days' where order_id=$1",[cancelOrder]);await db.query("update public.table_cancellations set created_at=statement_timestamp()-interval '40 days' where session_id=$1",[cancelled]);await db.query("update public.audit_log set created_at=statement_timestamp()-interval '40 days' where session_id=$1",[cancelled]);
+  await db.exec('reset role');await db.query("update public.table_sessions set opened_at=statement_timestamp()-interval '10 days',closed_at=statement_timestamp()-interval '10 days' where id=$1",[cancelled]);await db.query("update public.orders set created_at=statement_timestamp()-interval '10 days',done_at=statement_timestamp()-interval '10 days' where id=$1",[cancelOrder]);await db.query("update public.order_items set cancelled_at=statement_timestamp()-interval '10 days' where order_id=$1",[cancelOrder]);await db.query("update public.table_cancellations set created_at=statement_timestamp()-interval '10 days' where session_id=$1",[cancelled]);await db.query("update public.audit_log set created_at=statement_timestamp()-interval '10 days' where session_id=$1",[cancelled]);
   const candidates=(await db.query('select id from public.sales_retention_candidates()')).rows.map(x=>x.id);
   assert.ok(candidates.includes(cancelled));
   for(const s of [old,pairA,pairB])assert.ok(candidates.includes(s.session));
@@ -59,7 +60,7 @@ export async function checkWeeklySalesAndSlots(db,owner){
   assert.deepEqual((await one('select public.run_weekly_sales_cleanup() r')).r,{skipped:'paused'});
   for(const n of [2,3,4,5]){await as(`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`);await rejected(()=>one('select public.get_sales_retention_status()'),/Chỉ Owner/);await rejected(()=>one('select public.set_sales_retention_enabled(true)'),/Chỉ Owner/);await rejected(()=>one('select public.run_weekly_sales_cleanup()'),/permission denied/);}
   await db.exec('reset role;set role anon');await rejected(()=>one('select public.get_sales_retention_status()'),/permission denied/);
-  await as();const status=(await one('select public.get_sales_retention_status() r')).r;assert.equal(status.scheduled,false);assert.equal(status.eligible.sessions,candidates.length);await one('select public.set_sales_retention_enabled(true)');await rejected(()=>one('select public.run_weekly_sales_cleanup()'),/permission denied/);
+  await as();const status=(await one('select public.get_sales_retention_status() r')).r;assert.equal(status.retention_days,7);assert.equal(status.scheduled,false);assert.equal(status.eligible.sessions,candidates.length);await one('select public.set_sales_retention_enabled(true)');await rejected(()=>one('select public.run_weekly_sales_cleanup()'),/permission denied/);
   await db.exec('reset role');
   // Unknown FK causes an atomic failure, not a CASCADE or half-deleted set of invoices.
   await db.exec('create table public.retention_test_guard(session_id uuid references public.table_sessions(id))');await db.query('insert into public.retention_test_guard values($1)',[old.session]);
@@ -85,7 +86,7 @@ export async function checkWeeklySalesAndSlots(db,owner){
   await as();const scheduled=(await one('select public.get_sales_retention_status() r')).r;assert.equal(scheduled.scheduled,true);assert.equal(scheduled.enabled,true);
   const localNext=(await one("select extract(isodow from $1::timestamptz at time zone 'Asia/Ho_Chi_Minh') d,extract(hour from $1::timestamptz at time zone 'Asia/Ho_Chi_Minh') h",[scheduled.next_run]));assert.equal(localNext.d,'1');assert.equal(localNext.h,'3');
   await db.exec('reset role');
-  console.log('PASS 037/038 full business fixture: every hour boundary/microsecond once, partial and multi-day sums; weekly 30-day cutoff, recent/open/unfinished/merged-session protection, FK atomic rollback, anti-replay, Owner/anon/role gates, pause/repeat and invoice number continuity; install never deletes.');
+  console.log('PASS 037–039 full business fixture: every hour boundary/microsecond once, partial and multi-day sums; weekly 7-day cutoff, recent/open/unfinished/merged-session protection, FK atomic rollback, anti-replay, Owner/anon/role gates, pause/repeat and invoice number continuity; install never deletes.');
  }finally{await db.exec('rollback;reset role');}
  assert.deepEqual(await snapshot(financial),before);
 }
