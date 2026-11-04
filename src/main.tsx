@@ -199,6 +199,12 @@ function App(){
   try{
    const r=await supabase.rpc('submit_order',{p_table_id:payload.tableId,p_request_id:payload.requestId,p_items:payload.items});
    if(r.error){
+    if(r.error.code==='P0001'&&r.error.message==='Mã đơn đã hết thời gian lưu. Không gửi lại đơn cũ.'){
+     localStorage.removeItem(storageKey(user));
+     if(identity.current===user){setPending(null);setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));}
+     rejectedByMenu=true;
+     throw new Error('Đơn cũ đã được dọn theo thời gian lưu. Không tự gửi lại; kiểm tra bàn hiện tại trước khi gọi món mới.');
+    }
     if(r.error.code==='P0001'&&r.error.message==='Bàn không hoạt động.'){
      localStorage.removeItem(storageKey(user));
      if(identity.current===user){setPending(null);setPosScreen('order');setDrafts(d=>({...d,[payload!.tableId]:{}}));setNotes(n=>({...n,[payload!.tableId]:{}}));setSelected(null);}

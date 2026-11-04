@@ -1,5 +1,6 @@
 export type RevenueDay={day:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number};
-export type RevenueReport={products_complete:boolean;time_filter?:boolean;from:string;to:string;generated_at:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number;days:RevenueDay[];products:{name:string;qty:number;gross:number}[]};
+export type RevenueSlot=RevenueDay&{slot_index:number;slot:string};
+export type RevenueReport={products_complete:boolean;time_filter?:boolean;slots_complete?:boolean;slots?:RevenueSlot[];from:string;to:string;generated_at:string;invoices:number;gross:number;discount:number;total:number;cash:number;transfer:number;days:RevenueDay[];products:{name:string;qty:number;gross:number}[]};
 type Cell=string|number;
 // BOM preserves Vietnamese in Excel. Quote fields and neutralize spreadsheet formulas in text.
 export function csv(rows:Cell[][]){

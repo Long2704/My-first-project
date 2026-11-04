@@ -124,3 +124,15 @@
 .report-timezone{margin:0;color:var(--muted);font-size:12px}
 .report-period{overflow-wrap:anywhere}
 @media(min-width:1100px){.report-range-fields{grid-template-columns:minmax(0,1fr) minmax(130px,.8fr)}}
+
+.report-clock{margin:0;min-width:0}
+.report-clock legend{font-size:13px;font-weight:550;margin:0 0 7px;padding:0}
+.report-clock-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.report-clock-parts label{margin:0;font-weight:400;font-size:11px;color:var(--muted);min-width:0}
+.report-clock-parts select{width:100%;min-width:0;padding:9px 3px;margin-top:4px;font-size:14px;min-height:42px;background:#fff}
+@media(min-width:1100px){.report-range-fields{grid-template-columns:minmax(0,1fr) minmax(170px,1fr)}}
+.sales-retention{border-top:1px solid var(--line);padding-top:20px;margin-top:20px;display:grid;gap:10px}
+.sales-retention p{margin:0}
+.sales-retention button{justify-self:start}
+/* Native iOS select arrows can hide one digit in a narrow three-part clock. */
+.report-clock-parts select{-webkit-appearance:none;appearance:none;padding:9px 14px 9px 3px;background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M1%201l3%203%203-3'%20fill='none'%20stroke='%23667788'%20stroke-width='1.4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 3px center;background-size:8px 5px}
