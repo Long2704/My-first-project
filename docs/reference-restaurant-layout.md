@@ -21,3 +21,7 @@ Dùng `public/brand/vietnam-streetscape.svg` thay ảnh panorama cắt từ scre
 `cream-pos-theme.css` được nạp sau CSS của các component để các tab danh mục, ảnh biểu tượng món, bộ đếm, ghi chú, đơn đã lưu, thực đơn quản lý, tiền mặt/chuyển khoản, số tiền và nút xác nhận đều dùng kem–cam. Giữ màu đỏ cho lỗi và thao tác hủy. Không thay đổi xử lý tiền hoặc RPC. Thêm khoảng cuộn để ô sửa thực đơn không bị thanh điều hướng dưới che.
 
 Kiểm tra: build; reference-theme-flow (3 vai trò, 320–1440px); payment-layout-flow (3 vai trò, tiền mặt/chuyển khoản, màn hình thấp, retry); reorder-saved-flow; smoke thực đơn (kiểm tra nhập, lưu lại cùng mã sau tải lại, sửa giá, hết món và tổng đơn đã lưu). Tất cả bằng API giả. Chưa kiểm tra iPhone vật lý.
+
+## Khôi phục nền cũ
+
+Theo yêu cầu chủ quán, bỏ phần thay nền vector và các ghi đè độ đậm/kích thước nền. Dùng lại ảnh panorama Sài Gòn và cách hiển thị trước PR48; giữ nguyên giao diện kem–cam của menu và thanh toán.

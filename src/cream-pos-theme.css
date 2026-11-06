@@ -1,8 +1,5 @@
-/* Crisp vector scenery and a consistent cream/orange service experience. */
-:root{--restaurant-ink:#54270f;--restaurant-muted:#82634f;--restaurant-cream:#fff7ed;--restaurant-line:#ecd5c0;--restaurant-accent:#c64b06;--restaurant-orange:linear-gradient(135deg,#ff8610,#ed5b00);--saigon-art:url('/brand/vietnam-streetscape.svg')}
-.has-staff-shell:not(.has-pos-workspace)>.app-header::before{background-size:auto 100%!important;background-repeat:repeat-x!important;opacity:1!important;filter:none!important;mask-image:linear-gradient(to bottom,transparent,#000 12%,#000 93%,transparent)!important}
-.has-staff-shell:not(.has-pos-workspace)::after{opacity:.85!important;filter:none!important}
-.has-staff-shell:not(.has-pos-workspace)>.app-main::after{opacity:.5}
+/* Cream/orange service experience; scenery uses the original panorama theme. */
+:root{--restaurant-ink:#54270f;--restaurant-muted:#82634f;--restaurant-cream:#fff7ed;--restaurant-line:#ecd5c0;--restaurant-accent:#c64b06;--restaurant-orange:linear-gradient(135deg,#ff8610,#ed5b00)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline-color:#ce5609}
 button.primary:hover:not(:disabled),.primary:hover:not(:disabled){background:linear-gradient(135deg,#ee6f06,#ce4700);border-color:#ce5609}
 .has-pos-workspace{background:#fff3e3}
