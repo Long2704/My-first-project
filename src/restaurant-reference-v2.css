@@ -1,0 +1,81 @@
+/* Reference C v2 — warm restaurant UI. Presentation-only selectors. */
+:root{--brand:#F97316;--brand-soft:#FFF0DF;--line:#EED9C7;--muted:#876E5E}
+.pos-app{background:linear-gradient(180deg,#FFF8EF 0,#FFF9F4 320px,#FFF9F4 100%);color:#542B1B}
+.app-header{background:#FFF7EC;min-height:92px;border-bottom:1px solid #F1DECA}
+.app-header:before{background-image:url('/brand/vietnam-streetscape.svg');background-repeat:no-repeat;background-size:contain;background-position:center bottom;opacity:.32;mask-image:none;width:min(570px,47vw);right:22%;height:90px}
+.brand-mark{width:72px;height:72px;border-radius:15px;background:white;object-fit:contain}
+.brand strong{font-size:19px;letter-spacing:-.4px}
+.app-main:before{background:url('/brand/vietnam-streetscape.svg') no-repeat right top;background-size:contain;opacity:.12;width:min(420px,34vw);height:100px}
+.workspace-heading{position:relative}
+.workspace-heading h1{color:#713219;letter-spacing:-.7px}
+.service-main{min-width:0}
+.table-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 18px;max-width:570px}
+.overview-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:75px;border:1px solid #F1DECC;border-radius:16px;background:linear-gradient(145deg,#FFF5E8,#FFFDF9);box-shadow:0 3px 12px #8B46100C}
+.overview-stat strong{font-size:25px;line-height:1.1;color:#BC4B10;font-weight:850}
+.overview-stat span{font-size:12px;color:#785342;font-weight:600}
+.overview-stat:nth-child(2){background:#fff}
+.overview-stat:nth-child(3){background:#fff}
+.tables-toolbar{margin-bottom:18px}
+.table-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.table-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:165px;padding:16px 10px;gap:6px;border-radius:20px;background:linear-gradient(145deg,#FFF4E7,#FFFBF6);border:1px solid #F2D8BD;box-shadow:0 4px 14px #9B5A2210}
+.table-card.is-empty{background:linear-gradient(150deg,#FFFFFF,#FAFAFA);border-color:#E8E2DD}
+.table-card.is-cooking{background:linear-gradient(140deg,#FFF1D9,#FFF8ED)}
+.table-card.is-ready{background:linear-gradient(145deg,#FFF0DA,#FFF8ED)}
+.table-card-heading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
+.table-card-heading strong{font-size:17px;line-height:1.25;color:#512919}
+.table-card-icon{display:flex;align-items:center;justify-content:center;color:#F97316}
+.table-card-icon svg{width:32px;height:32px}
+.table-card.is-empty .table-card-icon{color:#7D828A}
+.table-card .table-total{color:#C84E0A;font-size:17px;font-weight:850;line-height:1.25}
+.table-card .table-state{font-size:12px;font-weight:600;color:#8A5639}
+.table-card.is-empty .table-state{color:#69717C}
+.table-card small{font-size:11px}
+.table-filters{background:transparent;border:0;gap:7px}
+.table-filters button{border:1px solid #E9DCD1;border-radius:999px;background:#fff;box-shadow:0 2px 8px #8A43100B}
+.table-filters button[aria-pressed=true]{background:linear-gradient(135deg,#FB7B16,#E95807);color:white;border-color:#F97316;box-shadow:0 3px 9px #F9731630}
+.search-field{background:#fff;border:1px solid #E9D9CA;border-radius:999px;box-shadow:0 2px 9px #8A431009}
+@media(min-width:1101px){
+ .pos-app{position:relative}
+ .app-header{padding-left:25px}
+ .app-navigation{position:absolute;top:92px;left:16px;width:212px;bottom:18px;height:auto;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:14px 10px;background:#FFFAF4;border:1px solid #F1E0D0;border-radius:20px;box-shadow:0 5px 24px #8A43100B}
+ .app-navigation>nav{display:flex;flex-direction:column;align-items:stretch;gap:6px;width:100%}
+ .app-navigation>nav>button,.management-menu>summary{justify-content:flex-start;text-align:left;width:100%;padding:0 15px;height:48px;gap:12px}
+ .management-menu{width:100%}
+ .management-dropdown{left:100%;top:0;bottom:auto;min-width:225px}
+ .sync-tools{margin-top:auto}
+ .app-main{margin-left:240px;max-width:none;padding:25px 30px}
+}
+@media(min-width:768px) and (max-width:1100px){
+ .table-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:767px){
+ .app-header{height:112px;min-height:112px;display:flex;justify-content:center;padding:8px 12px 10px}
+ .app-header:before{width:100%;height:65px;top:auto;bottom:0;right:0;opacity:.22;background-size:auto 68px;background-position:center bottom}
+ .brand{flex:0 1 auto;justify-content:center;z-index:1}
+ .brand-mark{width:85px;height:85px;background:transparent;filter:drop-shadow(0 3px 5px #9B4D1718)}
+ .brand>span{display:none}
+ .account{position:absolute;right:10px;top:12px;z-index:2}
+ .account-name{display:none}
+ .logout-button{background:#fff;border:1px solid #EAD9CA;border-radius:999px;font-size:10px;padding:7px 9px}
+ .app-main{padding:15px 12px 22px}
+ .app-main:before{width:115px;height:65px;opacity:.12}
+ .workspace-heading{margin-bottom:14px}
+ .workspace-heading h1{font-size:25px}
+ .table-overview{gap:8px;margin-bottom:14px}
+ .overview-stat{min-height:65px;border-radius:14px}
+ .overview-stat strong{font-size:22px}
+ .overview-stat span{font-size:11px}
+ .tables-toolbar{display:flex;flex-direction:column-reverse;gap:12px;margin-bottom:15px}
+ .table-filters{display:flex;gap:6px;width:100%;overflow-x:auto}
+ .table-filters button{flex:1;min-width:0;padding:9px 5px;font-size:11px}
+ .search-field{width:100%;max-width:none}
+ .table-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .table-card{min-height:146px;padding:12px 6px;gap:5px;border-radius:17px}
+ .table-card-heading{gap:5px}
+ .table-card-heading strong{font-size:15px}
+ .table-card-icon svg{width:27px;height:27px}
+ .table-card .table-total{font-size:14px}
+ .table-card .table-state{font-size:11px}
+ .app-navigation>nav>button[aria-pressed=true],.management-menu[data-active=true]>summary{background:#F97316;color:#fff}
+}
+@media(prefers-reduced-motion:reduce){.table-card{transition:none}}
