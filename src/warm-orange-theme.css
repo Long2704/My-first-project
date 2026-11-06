@@ -1,0 +1,96 @@
+/* Warm Vietnamese restaurant visual theme — presentation only.
+   Business logic, permissions, navigation handlers and payments remain untouched. */
+:root {
+  --brand:#F97316;
+  --brand-soft:#FFF0DE;
+  --line:#EEDCCB;
+  --muted:#796B60;
+  --nav:#FFF9F2;
+  color:#48271B;
+  background:#FFF9F2;
+}
+html {background:#FFF9F2}
+body {background:#FFF9F2;color:#48271B}
+.pos-app {min-height:100dvh;background:#FFF9F2}
+button,input,select,textarea {accent-color:#F97316}
+button {border-radius:12px;transition:background-color .16s,border-color .16s,transform .16s,box-shadow .16s}
+button:active:not(:disabled) {transform:scale(.985)}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible {outline:3px solid #FB923C;outline-offset:2px}
+button[aria-pressed=true] {background:#FFF0DE;color:#B94709;border-color:#FDBA74}
+button.primary,.primary {background:#F97316;color:#fff;border-color:#F97316}
+button.primary:hover:not(:disabled),.primary:hover:not(:disabled) {background:#DC570B;border-color:#DC570B}
+.app-header {height:auto;min-height:78px;padding:10px clamp(16px,3vw,32px);background:#FFF9F2;border-bottom:1px solid #F1DFCC;position:relative;isolation:isolate}
+.app-header:before {content:"";position:absolute;right:10%;top:0;width:min(320px,28vw);height:100%;pointer-events:none;opacity:.18;background:repeating-linear-gradient(135deg,transparent 0 22px,#E9A36C 23px 24px,transparent 25px 44px);mask-image:linear-gradient(to left,#000,transparent);z-index:-1}
+.brand {color:#602C1A}
+.brand-mark {width:58px;height:58px;object-fit:contain;background:#fff;border-radius:13px}
+.brand strong {color:#632B16;font-weight:800}
+.brand small {color:#A7653D}
+.account-name {color:#602C1A}
+.app-navigation {background:#FFF9F2;border-bottom:1px solid #F1DFCC;padding:0 clamp(16px,3vw,32px);box-shadow:0 3px 15px #7C391009}
+.app-navigation>nav>button,.management-menu>summary {color:#704B38;border-radius:12px;height:44px}
+.app-navigation>nav>button:hover,.app-navigation>nav>button[aria-pressed=true],.management-menu[data-active=true]>summary,.management-menu[open]>summary,.management-menu>summary:hover {background:#F97316;color:#fff;box-shadow:none}
+.app-navigation>nav>button[aria-pressed=true] {box-shadow:none}
+.management-dropdown {background:#fffdf9;border-color:#F0DDCB;border-radius:16px;box-shadow:0 14px 40px #7A3D1B22}
+.management-dropdown>button:hover {background:#FFF0DE}
+.sync-tools button {color:#874A2D;border-color:#EEDCCB;background:#fff}
+.sync-tools button:hover:not(:disabled) {background:#FFF0DE;border-color:#FDBA74;color:#A9430C}
+.connection-status {color:#6C5547}
+.app-main {max-width:1560px;padding:clamp(14px,2.4vw,30px);background:transparent;position:relative;isolation:isolate}
+.app-main:before {content:"";position:absolute;right:0;top:0;width:min(270px,22vw);height:125px;opacity:.13;pointer-events:none;background:radial-gradient(ellipse at 100% 0%,#F97316 0%,transparent 72%);z-index:-1}
+.workspace-heading h1 {color:#632B16;font-size:clamp(23px,2.3vw,31px);font-weight:800}
+.workspace-heading small,.workspace-subtitle {color:#9B765F}
+article,.table-order,.management-page>section,.login-form {border-color:#F0DFCF;border-radius:18px;box-shadow:0 4px 20px #8A43100A}
+.table-grid {gap:clamp(10px,1.3vw,18px)}
+.table-card {border-radius:18px;min-height:144px;background:#fffdf9;border:1px solid #EEDCCB;box-shadow:0 4px 12px #8A43100C;transition:transform .16s,border-color .16s,box-shadow .16s}
+.table-card:hover:not(:disabled) {transform:translateY(-2px);border-color:#FB923C;box-shadow:0 8px 22px #A851191A}
+.table-card.is-empty {background:#fff;border-color:#E8DDD3}
+.table-card.is-cooking {background:#FFF0DF;border-color:#F7C79B}
+.table-card.is-ready {background:#FFF4E8;border-color:#FDBA74}
+.table-card .table-total {color:#C4490D;font-weight:800}
+.table-card .table-state {color:#87553A}
+.table-filters {border-radius:14px;background:#fff;border-color:#EEDCCB}
+.table-filters button {border-radius:10px}
+.table-filters button[aria-pressed=true] {background:#F97316;color:#fff}
+.search-field input,input,select,textarea {border-color:#EAD7C7;border-radius:12px;background:#fffdfb;color:#4B3023}
+.search-field input:focus,input:focus,select:focus,textarea:focus {border-color:#FB923C}
+.notice {border-radius:14px}
+.login-shell {background:transparent}
+.login-form {background:#fffdf9}
+.table-order,.kitchen-card,.management-page article {background:#fffdf9}
+@media (max-width: 767px) {
+  .pos-app {padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .app-header {min-height:67px;padding:7px 14px}
+  .app-header:before {width:90px;opacity:.1}
+  .brand-mark {width:45px;height:45px;border-radius:10px}
+  .brand strong {font-size:14px}
+  .brand small {font-size:8px;letter-spacing:.7px}
+  .account {gap:6px}
+  .account-name {font-size:11px}
+  .logout-button {padding:6px;font-size:11px}
+  .app-navigation {position:fixed;bottom:0;left:0;right:0;top:auto;z-index:80;min-height:calc(65px + env(safe-area-inset-bottom,0px));padding:5px 8px calc(5px + env(safe-area-inset-bottom,0px));background:#fffdf9;border-top:1px solid #F0DDCB;border-bottom:0;box-shadow:0 -7px 25px #7A3D1B12;display:flex;align-items:center;justify-content:center}
+  .app-navigation>nav {height:auto;flex:1;display:flex;justify-content:space-around;gap:4px}
+  .app-navigation>nav>button,.management-menu>summary {height:54px;min-width:64px;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 7px;font-size:10px;line-height:1.2;border-radius:12px;white-space:nowrap}
+  .app-navigation>nav .pos-icon {width:21px;height:21px}
+  .management-menu {height:auto;position:static}
+  .management-menu>summary .pos-icon:last-child {display:none}
+  .management-dropdown {position:absolute;bottom:calc(100% + 10px);top:auto;left:8px;right:8px;width:auto;max-height:65dvh;overflow-y:auto}
+  .sync-tools {display:none}
+  .app-main {padding:15px 12px 24px}
+  .workspace-heading {margin-bottom:14px}
+  .table-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .table-card {min-height:126px;padding:12px;border-radius:16px}
+  .tables-toolbar {gap:10px}
+  .search-field {max-width:none;flex-basis:100%}
+  .table-filters {width:100%;justify-content:space-between;overflow-x:auto}
+  .table-filters button {flex:1;white-space:nowrap}
+  .service-layout {grid-template-columns:minmax(0,1fr)}
+}
+@media (min-width:768px) and (max-width:1100px) {
+  .app-navigation {padding:0 14px}
+  .app-navigation>nav>button,.management-menu>summary {padding:0 10px}
+  .app-main {padding:18px}
+}
+@media (prefers-reduced-motion:reduce) {
+  button,.table-card {transition:none!important}
+  button:active:not(:disabled),.table-card:hover:not(:disabled) {transform:none}
+}
