@@ -12,6 +12,7 @@ import './warm-orange-theme.css';
 import './restaurant-reference-v2.css';
 import './mobile-layout-hotfix.css';
 import './saigon-art-theme.css';
+import './saigon-exact-image.css';
 import PWAControls, {OfflineNotice,useOnline} from './pwa/PWAControls';
 import PaymentModal from './pos/PaymentModal';
 import type {PaymentHandle} from './pos/PaymentModal';
