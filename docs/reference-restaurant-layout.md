@@ -13,3 +13,11 @@ Build thành công. `tests/reference-theme-flow.mjs` kiểm tra ba vai trò, s�
 Chưa kiểm tra trên iPhone vật lý. WebKit cục bộ không khởi chạy do môi trường thiếu thư viện hệ thống.
 
 Sau cập nhật: hoàn tất thao tác đang chờ, đóng mọi cửa sổ POS và app đã cài, rồi mở lại để nhận bản PWA mới.
+
+## Nền rõ và đồng bộ menu/thanh toán
+
+Dùng `public/brand/vietnam-streetscape.svg` thay ảnh panorama cắt từ screenshot có độ phân giải thấp. Nền vector giữ nét khi phóng lớn, được tải cùng bản PWA. Logo gốc giữ nguyên.
+
+`cream-pos-theme.css` được nạp sau CSS của các component để các tab danh mục, ảnh biểu tượng món, bộ đếm, ghi chú, đơn đã lưu, thực đơn quản lý, tiền mặt/chuyển khoản, số tiền và nút xác nhận đều dùng kem–cam. Giữ màu đỏ cho lỗi và thao tác hủy. Không thay đổi xử lý tiền hoặc RPC. Thêm khoảng cuộn để ô sửa thực đơn không bị thanh điều hướng dưới che.
+
+Kiểm tra: build; reference-theme-flow (3 vai trò, 320–1440px); payment-layout-flow (3 vai trò, tiền mặt/chuyển khoản, màn hình thấp, retry); reorder-saved-flow; smoke thực đơn (kiểm tra nhập, lưu lại cùng mã sau tải lại, sửa giá, hết món và tổng đơn đã lưu). Tất cả bằng API giả. Chưa kiểm tra iPhone vật lý.

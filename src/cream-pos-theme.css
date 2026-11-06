@@ -1,0 +1,96 @@
+/* Crisp vector scenery and a consistent cream/orange service experience. */
+:root{--restaurant-ink:#54270f;--restaurant-muted:#82634f;--restaurant-cream:#fff7ed;--restaurant-line:#ecd5c0;--restaurant-accent:#c64b06;--restaurant-orange:linear-gradient(135deg,#ff8610,#ed5b00);--saigon-art:url('/brand/vietnam-streetscape.svg')}
+.has-staff-shell:not(.has-pos-workspace)>.app-header::before{background-size:auto 100%!important;background-repeat:repeat-x!important;opacity:1!important;filter:none!important;mask-image:linear-gradient(to bottom,transparent,#000 12%,#000 93%,transparent)!important}
+.has-staff-shell:not(.has-pos-workspace)::after{opacity:.85!important;filter:none!important}
+.has-staff-shell:not(.has-pos-workspace)>.app-main::after{opacity:.5}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline-color:#ce5609}
+button.primary:hover:not(:disabled),.primary:hover:not(:disabled){background:linear-gradient(135deg,#ee6f06,#ce4700);border-color:#ce5609}
+.has-pos-workspace{background:#fff3e3}
+.pos-order-workspace{--brand:#e55d08;--brand-soft:#ffecd6;--line:#ecd5c0;background:#fff7ed;color:var(--restaurant-ink);border-color:var(--restaurant-line)}
+.pos-order-workspace button{color:var(--restaurant-ink);border-color:var(--restaurant-line);background:#fffdf9}
+.pos-order-workspace button.primary,.payment-sheet .payment-footer>button.primary,.payment-form>button.primary{color:#fff;background:var(--restaurant-orange);border-color:#ec6c0b;box-shadow:0 3px 9px #cc58001a}
+.pos-order-workspace button.primary:hover:not(:disabled),.payment-sheet .payment-footer>button.primary:hover:not(:disabled){background:linear-gradient(135deg,#ed7009,#cf4900);border-color:#ce5609}
+.pos-order-workspace button:disabled{opacity:.45}
+.pos-screen-header{background:#fff4e5;border-bottom:1px solid var(--restaurant-line)}
+.pos-screen-header h1{color:var(--restaurant-ink)}
+.pos-order-workspace .pos-icon-button,.pos-mode-order .pos-back,.pos-mode-order .pos-header-actions>.pos-icon-button{background:#fffaf3!important;color:#76370f}
+.has-pos-workspace .pos-legacy-operations>.table-actions-trigger{background:#fffaf3;color:#76370f;border:1px solid var(--restaurant-line)}
+.pos-menu-controls{background:#fff7ed}
+.pos-category-tabs{padding-top:10px}
+.pos-category-tabs button{background:#fffdf9;border:1px solid #ecd5c0;color:#6a3519}
+.pos-category-tabs button[aria-pressed=true]{background:var(--restaurant-orange);color:white;border-color:#ed6d0b;box-shadow:0 2px 5px #c35a0015}
+.pos-product-search input,.pos-line-note input{background:#fffdfa;border-color:#e7cdb6;color:var(--restaurant-ink)}
+.pos-product-search>.pos-ui-icon{color:#9a7254}
+.pos-menu-pane,.pos-order-pane{background:#fff7ed}
+.pos-order-workspace .pos-product-row{background:#fffcf7;border-color:var(--restaurant-line);border-radius:12px;margin:7px 0;padding:12px 9px;box-shadow:0 2px 4px #78370008}
+.pos-product-art,.pos-product-row.is-selected .pos-product-art,.pos-order-art{background:#ffecd5;color:#d45d0d}
+.pos-product-copy h2,.pos-order-item-heading h2,.pos-order-item-heading h3{color:var(--restaurant-ink)}
+.pos-product-copy>span,.pos-order-item-bottom>strong{color:#a84009}
+.pos-product-selected{background:#e96b09;border-color:#fff9ef}
+.pos-order-workspace .pos-product-add{background:#fff1df;color:#bd4d08;border-color:#efc29b}
+.pos-quantity-control{background:#fffdf9;border-color:#e7c5a7;border-radius:9px}
+.pos-quantity-control output{color:var(--restaurant-ink)}
+.pos-quantity-control button{color:#b54a0a;background:transparent}
+.pos-quantity-control button:focus-visible{outline-color:#ce5609}
+.pos-product-add:active:not(:disabled),.pos-quantity-control button:active:not(:disabled){background:#ffdfb9!important}
+.pos-menu-bottom,.pos-bottom-bar{background:#fffaf2;border-color:var(--restaurant-line);box-shadow:0 -3px 12px #81380006}
+.pos-menu-bottom button,.pos-bottom-actions>button{border-radius:12px}
+.pos-menu-bottom button:first-child{background:#fff0dc;border-color:#eac8a9;color:#793914}
+.pos-menu-bottom .primary span{background:#ad400a;color:white}
+.pos-bottom-actions>button{border-color:#d26820;color:#a3440b;background:#fffdf9}
+.pos-floating-add{background:var(--restaurant-orange)!important;box-shadow:0 4px 12px #ac42002b}
+.pos-total-line>strong{color:#a83f08}
+.pos-total-line small{background:#ffe4c4;color:#87431b}
+.pos-info-chips button,.pos-info-chips>span{background:#ffead2;color:#7c3d15}
+.pos-draft-row,.pos-saved-line{background:transparent!important;border-bottom-color:var(--restaurant-line)!important}
+.pos-lines-label,.pos-line-note,.pos-saved-note,.pos-saved-qty,.pos-order-item-heading>small,.pos-empty,.pos-saved-source p,.pos-saved-source small{color:var(--restaurant-muted)}
+.pos-empty h2{color:var(--restaurant-ink)}
+.pos-extra-note{color:#896149}.pos-extra-note strong{color:#b44a0c}
+.pos-saved-sources{border-color:var(--restaurant-line);background:#fff1e1}.pos-saved-source{border-color:var(--restaurant-line)}
+.pos-draft-menu{background:#fffaf3;border-color:var(--restaurant-line)}
+.pos-info-dialog,.pos-info-sheet{background:#fff8ef;color:var(--restaurant-ink)}
+.pos-info-sheet header button{background:#fffdf9;color:var(--restaurant-ink)}
+.pos-info-sheet form{background:transparent}
+.pos-info-sheet input{border-color:var(--restaurant-line);color:var(--restaurant-ink)}
+.pos-workspace-feedback .notice:not(.error-notice){background:#fff0dc;border-color:#edc69f;color:#7c3d15}
+/* Payment retains its scrollable body and fixed confirmation footer. */
+.payment-dialog,.payment-dialog.payment-sheet{background:#fff8ef;color:var(--restaurant-ink);border-color:#e9cdb4;box-shadow:0 16px 70px #65300f30}
+.payment-dialog::backdrop{background:#3f230c66}
+.payment-sheet .payment-header{background:#fff3e2;border-color:var(--restaurant-line)}
+.payment-sheet .payment-header h2{color:var(--restaurant-ink)}
+.payment-sheet .payment-header p{color:var(--restaurant-muted)}
+.payment-sheet .payment-header>button{background:#fffcf8;color:#76370f;border-color:var(--restaurant-line);border-radius:10px}
+.payment-sheet .payment-amount{background:linear-gradient(135deg,#ffe7c7,#fff0dc);border:1px solid #f4c495;border-radius:16px}
+.payment-sheet .payment-amount>strong{color:#bb4405}
+.payment-sheet .payment-amount>span,.payment-sheet .payment-amount>p,.payment-sheet .payment-amount>small{color:#7d431d}
+.payment-sheet .payment-form{background:transparent}
+.payment-sheet .payment-methods>button{background:#fffdf9;border-color:#e7ceb8;color:#805339;border-radius:12px}
+.payment-sheet .payment-methods>button[aria-pressed=true]{background:#ffead0;color:#a83f08;border-color:#df781e;box-shadow:inset 0 0 0 1px #df781e}
+.payment-sheet .payment-cash-label,.payment-sheet .payment-change,.payment-sheet .payment-items summary{color:#76533b}
+.payment-sheet .payment-cash-input input{background:#fffefb;color:var(--restaurant-ink);border-color:#e5c6a8}
+.payment-sheet .payment-cash-input input:focus-visible,.payment-sheet .payment-items summary:focus-visible{outline-color:#ce5609}
+.payment-sheet .payment-cash-input>span,.payment-sheet .payment-items summary>span:last-child,.payment-sheet .payment-items li p{color:var(--restaurant-muted)}
+.payment-sheet .payment-change strong{color:#98400e}
+.payment-sheet .payment-transfer-note,.payment-sheet .payment-pending-note{background:#fff0de;color:#7d431d}
+.payment-sheet .payment-items,.payment-sheet .payment-items li{border-color:var(--restaurant-line)}
+.payment-sheet .payment-items summary:after{border-color:#94613f}
+.payment-sheet .payment-footer{background:#fff4e5;border-color:var(--restaurant-line)}
+.payment-sheet .receipt h3{color:#b4450b}
+/* Owner's menu editor uses the same palette as the ordering menu. */
+.pos-app[data-view=menu]>.app-main{background:transparent}
+.pos-app[data-view=menu] .management-page{background:#fffaf3;border-color:var(--restaurant-line);border-radius:18px;color:var(--restaurant-ink)}
+.menu-management{color:var(--restaurant-ink)}
+.menu-management>button{background:#fff0dd;color:#a4430a;border-color:#e8bb95;border-radius:12px}
+.menu-edit-form{background:#fff0df;border-color:var(--restaurant-line);border-radius:16px}
+.menu-edit-form input,.menu-edit-form select{background:#fffdfa;color:var(--restaurant-ink);border-color:#e6c9ae;border-radius:9px;accent-color:#d45b09}
+.menu-edit-form>button{background:#fffbf6;color:#89431b;border-color:#e3c5a9}
+.managed-menu-list article{background:#fffdf9;border-color:var(--restaurant-line);border-radius:14px;box-shadow:0 2px 5px #78370008}
+.managed-menu-list h3{color:var(--restaurant-ink)}
+.managed-menu-list p{color:#8b4b22}
+.managed-menu-list .menu-edit-button{background:#fff0dd;color:#a4430a;border-color:#e8bb95;border-radius:10px}
+.menu-item-state{background:#ffe3bb;color:#81431c}
+@media(hover:hover) and (pointer:fine){.pos-quantity-control button:hover:not(:disabled),.pos-product-add:hover:not(:disabled){background:#ffead0}.managed-menu-list .menu-edit-button:hover:not(:disabled){background:#ffe2bc}}
+@media(max-width:1023px){
+ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+ .menu-management input,.menu-management select,.menu-management button{scroll-margin-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+}
