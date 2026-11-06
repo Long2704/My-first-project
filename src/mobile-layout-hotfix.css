@@ -1,0 +1,38 @@
+/* Mobile layout hotfix: prevent page-wide horizontal scrolling and overlapping controls.
+   Overrides only the visual layer. */
+html,body,#root,.pos-app{max-width:100%;min-width:0}
+body{overflow-x:hidden}
+.pos-app{width:100%;overflow-x:clip}
+.service-page,.service-layout.tables-only,.service-layout.tables-only>.service-main,.table-overview,.tables-toolbar,.table-grid{min-width:0;max-width:100%;box-sizing:border-box}
+.service-layout.tables-only{display:grid;grid-template-columns:minmax(0,1fr)!important;width:100%}
+.table-grid{width:100%}
+.table-card{min-width:0;max-width:100%;width:100%;overflow:hidden}
+.table-card-heading,.table-card-heading strong{max-width:100%;overflow-wrap:anywhere}
+.table-filters button{min-width:0}
+.table-filters button span{white-space:nowrap}
+@media(max-width:767px){
+ .pos-app{width:100%;overflow-x:clip}
+ .app-header{width:100%;max-width:100%;overflow:hidden;position:relative;box-sizing:border-box}
+ .app-header .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:90px;height:90px;flex:none;display:flex;align-items:center;justify-content:center}
+ .app-header .brand-mark{display:block;width:85px;height:85px;max-width:85px;object-fit:contain}
+ .app-header .account{right:10px;left:auto;top:12px}
+ .app-main{width:100%;max-width:100%;min-width:0;margin:0;padding:15px 12px 22px;overflow-x:clip;box-sizing:border-box}
+ .service-page,.service-layout.tables-only,.service-layout.tables-only>.service-main{width:100%;max-width:100%;min-width:0;margin:0}
+ .table-overview{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%;gap:8px}
+ .overview-stat{width:auto;min-width:0;max-width:100%;padding:8px 3px;text-align:center}
+ .overview-stat strong{font-size:22px}
+ .overview-stat span{font-size:11px;white-space:normal}
+ .tables-toolbar{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;flex-wrap:nowrap!important;gap:12px!important;width:100%;margin:0 0 14px}
+ .tables-toolbar>.search-field{order:2!important;position:relative!important;display:flex!important;align-items:center!important;flex:none!important;flex-basis:auto!important;min-width:0!important;max-width:100%!important;width:100%!important;height:46px!important;margin:0!important;padding:0!important;border:1px solid #EAD8C7!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important;overflow:hidden}
+ .tables-toolbar>.search-field>.pos-icon{position:absolute!important;left:13px!important;top:50%!important;transform:translateY(-50%)!important;width:18px!important;height:18px!important;z-index:1}
+ .tables-toolbar>.search-field>input{position:static!important;display:block!important;flex:1!important;width:100%!important;max-width:100%!important;min-width:0!important;height:44px!important;min-height:44px!important;margin:0!important;padding:0 12px 0 40px!important;border:0!important;outline-offset:-3px;background:transparent!important;border-radius:14px!important;font-size:16px!important;box-shadow:none!important}
+ .tables-toolbar>.table-filters{order:1!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;flex:none!important;min-width:0!important;width:100%!important;max-width:100%!important;gap:6px!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;overflow:visible!important}
+ .tables-toolbar>.table-filters>button{display:flex!important;align-items:center;justify-content:center;gap:3px;flex:none!important;min-width:0!important;width:100%!important;max-width:100%!important;min-height:40px!important;margin:0!important;padding:6px 3px!important;border-radius:999px!important;font-size:11px!important;white-space:nowrap!important;line-height:1.2!important}
+ .tables-toolbar>.table-filters>button span{margin-left:0!important;padding:1px 3px!important;font-size:10px!important}
+ .table-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;width:100%!important;max-width:100%!important;min-width:0!important}
+ .table-card{min-height:145px!important;padding:12px 6px!important}
+}
+@media(max-width:360px){
+ .tables-toolbar>.table-filters>button{font-size:10px!important;letter-spacing:-.2px}
+ .tables-toolbar>.table-filters>button span{font-size:9px!important}
+}
