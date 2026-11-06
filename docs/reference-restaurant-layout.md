@@ -25,3 +25,7 @@ Kiểm tra: build; reference-theme-flow (3 vai trò, 320–1440px); payment-layo
 ## Khôi phục nền cũ
 
 Theo yêu cầu chủ quán, bỏ phần thay nền vector và các ghi đè độ đậm/kích thước nền. Dùng lại ảnh panorama Sài Gòn và cách hiển thị trước PR48; giữ nguyên giao diện kem–cam của menu và thanh toán.
+
+## Nền phố cổ theo mẫu mới
+
+Thay nền bằng `old-town-orange.webp`: hình minh họa được tạo theo phong cách mái ngói, nhà gỗ, cây lớn và núi sông nét cam trong ảnh tham khảo, không phải phần cắt trực tiếp từ ảnh giao diện. Chỉ đổi ảnh nền và cách căn ở đầu/chân trang; giữ logo, bố cục và giao diện kem–cam của menu/thanh toán. WebP khoảng 231KB, được đưa vào cache PWA cùng bản build. Kiểm tra build và luồng reference-theme-flow cho 3 vai trò, 320–1440px bằng API giả.

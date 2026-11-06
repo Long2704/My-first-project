@@ -91,3 +91,14 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled){background:lin
  html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
  .menu-management input,.menu-management select,.menu-management button{scroll-margin-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 }
+/* Detailed old-town illustration inspired by the restaurant reference mockup. */
+:root{--saigon-art:url('/brand/old-town-orange.webp')}
+.has-staff-shell:not(.has-pos-workspace)>.app-header::before{background-image:var(--saigon-art)!important;background-size:100% auto!important;background-position:center top!important;background-repeat:no-repeat!important;opacity:.95!important;filter:none!important;mask-image:linear-gradient(to bottom,#000 0%,#000 76%,transparent 100%)!important}
+@media(max-width:1023px){
+ .has-staff-shell:not(.has-pos-workspace)>.app-header::before{height:145px!important;background-size:auto 235px!important;background-position:center top!important}
+ .has-staff-shell:not(.has-pos-workspace)::after{background-size:auto 175px!important;background-position:center bottom!important;opacity:.75!important}
+}
+@media(min-width:1024px){
+ .has-staff-shell:not(.has-pos-workspace)>.app-main{isolation:isolate}
+ .has-staff-shell:not(.has-pos-workspace)>.app-main::after{background-size:100% auto;background-position:center bottom;opacity:.65}
+}
