@@ -33,8 +33,6 @@ Các chức năng hiển thị theo quyền của tài khoản **Owner (chủ qu
 | **Supabase** | Lưu tài khoản, thực đơn, đơn hàng, hóa đơn và ảnh; kiểm tra quyền truy cập. |
 | **Vercel** | Triển khai website để nhân viên mở và sử dụng. |
 
-Sửa README chỉ thay tài liệu giới thiệu trên GitHub, không sửa chức năng hay dữ liệu bán hàng.
-
 ## Chạy dự án trên máy tính
 
 Phần này dành cho người sửa mã nguồn. Người dùng app chỉ cần mở đường dẫn phía trên.
